@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import type { EntrySummary } from "../../server/core/recipes";
+import { photoUrl } from "../photo-prepare";
 import { IdeaIcon } from "./icons";
 
 function metaLine(entry: EntrySummary): string {
@@ -28,10 +29,15 @@ export function EntryRow({ entry }: { entry: EntrySummary }) {
           <h2 className={isIdea ? "entry-title idea" : "entry-title"}>{entry.title}</h2>
           {meta && <p className="entry-meta">{meta}</p>}
         </div>
-        {!isIdea && entry.ingredientPreview.length > 0 && (
-          <div className="snippet" aria-hidden="true">
-            {entry.ingredientPreview.join(", ")}…
-          </div>
+        {entry.coverPhoto ? (
+          <img className="thumb" src={photoUrl(entry.coverPhoto.id, "thumb")} alt="" width={76} height={76} loading="lazy" />
+        ) : (
+          !isIdea &&
+          entry.ingredientPreview.length > 0 && (
+            <div className="snippet" aria-hidden="true">
+              {entry.ingredientPreview.join(", ")}…
+            </div>
+          )
         )}
       </Link>
     </li>

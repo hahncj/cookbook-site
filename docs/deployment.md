@@ -84,7 +84,7 @@ To apply them by hand (for example after deploying from your machine with `npm r
 npm run db:migrate:remote
 ```
 
-Note: `wrangler d1 export` cannot export databases that contain virtual tables, and the catalog's full-text index (`recipes_fts`) is one. Use D1 Time Travel for point-in-time recovery; the app's own backup download (M3) covers full exports.
+Note: `wrangler d1 export` cannot export databases that contain virtual tables, and the catalog's full-text index (`recipes_fts`) is one. Use D1 Time Travel for point-in-time recovery; the app's own backup (footer → Backup; see backup-restore.md) covers full exports.
 
 ### Measure CPU time on the free plan (M0)
 

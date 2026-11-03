@@ -43,3 +43,14 @@ export const pageStub: PageRenderer = async () => new Response("<html>page</html
 export function request(services: Services, path: string, init?: RequestInit) {
   return handleRequest(new Request(`${BASE_URL}${path}`, init), services, pageStub);
 }
+
+/** A signed session cookie for a new user with this email (stands in for Google sign-in). */
+export async function sessionCookieFor(services: Services, email: string) {
+  const { serializeSignedCookie } = await import("better-call");
+  const ctx = await services.auth.$context;
+  const id = crypto.randomUUID();
+  const now = new Date();
+  await services.db.insert(schema.user).values({ id, email, name: "Someone", emailVerified: true, createdAt: now, updatedAt: now });
+  const session = await ctx.internalAdapter.createSession(id);
+  return (await serializeSignedCookie("better-auth.session_token", session.token, ctx.secret)).split(";")[0]!;
+}

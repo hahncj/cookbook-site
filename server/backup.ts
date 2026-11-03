@@ -139,6 +139,29 @@ export async function isCatalogEmpty(db: Database): Promise<boolean> {
   return true;
 }
 
+/**
+ * True when every recipe, tag, collection and photo already in the cookbook
+ * comes from this backup, i.e. an interrupted restore of the same file. That
+ * makes "run the restore again" safe without ever mixing in other data.
+ */
+export async function catalogContainedIn(
+  db: Database,
+  ids: { recipes?: unknown; tags?: unknown; collections?: unknown; photos?: unknown },
+): Promise<boolean> {
+  const checks = [
+    { table: recipes, column: recipes.id, list: ids.recipes },
+    { table: tags, column: tags.id, list: ids.tags },
+    { table: collections, column: collections.id, list: ids.collections },
+    { table: photos, column: photos.id, list: ids.photos },
+  ];
+  for (const { table, column, list } of checks) {
+    const allowed = new Set(Array.isArray(list) ? list.filter((v): v is string => typeof v === "string") : []);
+    const rows = await db.select({ id: column }).from(table);
+    if (rows.some((row) => !allowed.has(row.id))) return false;
+  }
+  return true;
+}
+
 export const MAX_ROWS_PER_CHUNK = 200;
 
 export type ImportResult = { ok: true; inserted: number } | { ok: false; message: string };

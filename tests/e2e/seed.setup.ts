@@ -86,6 +86,37 @@ setup("seed sample recipes and an admin session", async () => {
   const session = await ctx.internalAdapter.createSession(userId);
   const cookie = (await serializeSignedCookie("better-auth.session_token", session.token, ctx.secret)).split(";")[0]!;
   const [name, ...rest] = cookie.split("=");
-  writeFileSync(`${E2E.dir}/fixtures.json`, JSON.stringify({ recipeId: ids[0], longId: ids[1], ideaId: ids[2], cookie: { name, value: rest.join("=") } }));
   sqlite.close();
+
+  // The empty second instance (backup restore target): only an admin session.
+  const freshSqlite = new Database(`${E2E.fresh.dir}/cookbook.db`);
+  freshSqlite.pragma("journal_mode = WAL");
+  const freshDb = drizzle(freshSqlite, { schema });
+  const freshServices = createServices({
+    config: loadConfig(
+      { PUBLIC_BASE_URL: E2E.fresh.baseURL, ADMIN_EMAILS: E2E.adminEmail, BETTER_AUTH_SECRET: E2E.secret, GOOGLE_CLIENT_ID: "e2e", GOOGLE_CLIENT_SECRET: "e2e" },
+      "node",
+    ),
+    db: freshDb,
+    media: null,
+    fetchClientMetadata: fetchClientMetadataViaFetch,
+  });
+  const freshUserId = crypto.randomUUID();
+  await freshDb.insert(schema.user).values({ id: freshUserId, email: E2E.adminEmail, name: "Admin", emailVerified: true, createdAt: now, updatedAt: now });
+  const freshCtx = await freshServices.auth.$context;
+  const freshSession = await freshCtx.internalAdapter.createSession(freshUserId);
+  const freshCookie = (await serializeSignedCookie("better-auth.session_token", freshSession.token, freshCtx.secret)).split(";")[0]!;
+  const [freshName, ...freshRest] = freshCookie.split("=");
+  freshSqlite.close();
+
+  writeFileSync(
+    `${E2E.dir}/fixtures.json`,
+    JSON.stringify({
+      recipeId: ids[0],
+      longId: ids[1],
+      ideaId: ids[2],
+      cookie: { name, value: rest.join("=") },
+      freshCookie: { name: freshName, value: freshRest.join("=") },
+    }),
+  );
 });

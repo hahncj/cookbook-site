@@ -1,7 +1,9 @@
-import { Link, data } from "react-router";
+import { Form, Link, data, useNavigation } from "react-router";
 import { jsonForScriptTag, toSchemaOrgRecipe } from "../../server/core/recipes";
-import { BackIcon, EditIcon } from "../components/icons";
+import { requireAdminWrite } from "../admin.server";
+import { BackIcon, EditIcon, HistoryIcon } from "../components/icons";
 import { servicesContext } from "../context";
+import { photoUrl } from "../photo-prepare";
 import { useRootData } from "../root";
 import type { Route } from "./+types/recipe";
 
@@ -11,7 +13,26 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   if (!entry) throw data("Not found", { status: 404 });
   const pageUrl = `${services.config.baseUrl}/recipes/${entry.id}`;
   const schema = toSchemaOrgRecipe(entry, pageUrl);
-  return { entry, schemaJson: schema ? jsonForScriptTag(schema) : null };
+  if (schema && entry.photos.length > 0) {
+    schema.image = entry.photos.map((photo) => `${services.config.baseUrl}${photoUrl(photo.id)}`);
+  }
+  const notes = await services.catalog.listNotes(entry.id);
+  return { entry, notes, schemaJson: schema ? jsonForScriptTag(schema) : null };
+}
+
+// POST: add a dated "notes & experiments" entry (admin only; not a new version).
+export async function action({ request, params, context }: Route.ActionArgs) {
+  const services = context.get(servicesContext);
+  const admin = await requireAdminWrite(request, services);
+  const form = await request.formData();
+  const body = String(form.get("note") ?? "");
+  const result = await services.catalog.addNote(params.id, body, { userId: admin.userId });
+  if (result === "not_found") throw data("Not found", { status: 404 });
+  if (result === "ok") return { noteError: null, noteDraft: "" };
+  return {
+    noteError: result === "empty" ? "Write something first." : "Keep notes under 2,000 characters.",
+    noteDraft: body,
+  };
 }
 
 export function meta({ loaderData: loaded }: Route.MetaArgs) {
@@ -33,9 +54,12 @@ function sourceLabel(url: string) {
   }
 }
 
-export default function RecipePage({ loaderData }: Route.ComponentProps) {
-  const { entry, schemaJson } = loaderData;
+export default function RecipePage({ loaderData, actionData }: Route.ComponentProps) {
+  const { entry, notes, schemaJson } = loaderData;
   const { viewer } = useRootData();
+  const navigation = useNavigation();
+  const addingNote = navigation.state === "submitting" && navigation.formData?.has("note");
+  const [cover, ...gallery] = entry.photos;
   const isIdea = entry.kind === "idea";
   const facts = [
     entry.yieldText,
@@ -59,6 +83,13 @@ export default function RecipePage({ loaderData }: Route.ComponentProps) {
           </Link>
         )}
       </div>
+
+      {cover && (
+        <figure className="recipe-cover">
+          <img src={photoUrl(cover.id)} alt={cover.caption || `Photo of ${entry.title}`} />
+          {cover.caption && <figcaption>{cover.caption}</figcaption>}
+        </figure>
+      )}
 
       <header className="recipe-header">
         {(isIdea || entry.tags.length > 0) && (
@@ -119,6 +150,69 @@ export default function RecipePage({ loaderData }: Route.ComponentProps) {
         </section>
       )}
 
+      {gallery.length > 0 && (
+        <section aria-labelledby="photos-heading">
+          <h2 id="photos-heading" className="section-title">
+            More photos
+          </h2>
+          <ul className="gallery">
+            {gallery.map((photo, index) => (
+              <li key={photo.id}>
+                <figure>
+                  <a href={photoUrl(photo.id)} target="_blank" rel="noopener">
+                    <img src={photoUrl(photo.id, "thumb")} alt={photo.caption || `Photo ${index + 2} of ${entry.title}`} loading="lazy" />
+                  </a>
+                  {photo.caption && <figcaption>{photo.caption}</figcaption>}
+                </figure>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {(notes.length > 0 || viewer?.isAdmin) && (
+        <section aria-labelledby="experiments-heading" className="experiments">
+          <h2 id="experiments-heading" className="section-title">
+            Notes &amp; experiments
+          </h2>
+          {notes.length > 0 && (
+            <ul className="experiment-list">
+              {notes.map((note) => (
+                <li key={note.id}>
+                  <time dateTime={new Date(note.createdAt).toISOString()}>{formatDate(note.createdAt)}</time>
+                  <p>{note.body}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+          {viewer?.isAdmin && (
+            <Form method="post" className="note-form" preventScrollReset key={notes.length}>
+              <label htmlFor="note" className="visually-hidden">
+                Add a note about an experiment or change
+              </label>
+              <textarea
+                id="note"
+                name="note"
+                rows={2}
+                maxLength={2000}
+                defaultValue={actionData?.noteDraft ?? ""}
+                placeholder="What did you try? How did it turn out?"
+                aria-invalid={actionData?.noteError ? true : undefined}
+                aria-describedby={actionData?.noteError ? "note-error" : undefined}
+              />
+              {actionData?.noteError && (
+                <p id="note-error" className="error-text">
+                  {actionData.noteError}
+                </p>
+              )}
+              <button type="submit" className="btn" disabled={addingNote}>
+                {addingNote ? "Adding…" : "Add note"}
+              </button>
+            </Form>
+          )}
+        </section>
+      )}
+
       {(entry.tags.length > 0 || entry.collections.length > 0) && (
         <section aria-label="Tags and collections" className="tag-links">
           {entry.collections.map((collection) => (
@@ -148,6 +242,10 @@ export default function RecipePage({ loaderData }: Route.ComponentProps) {
           Added {formatDate(entry.createdAt)}
           {entry.revision > 1 && ` · updated ${formatDate(entry.updatedAt)}`}
         </span>
+        <Link to={`/recipes/${entry.id}/history`} className="history-link">
+          <HistoryIcon />
+          Version {entry.revision} · View history
+        </Link>
       </footer>
     </article>
   );

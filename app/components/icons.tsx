@@ -58,3 +58,23 @@ export const CloseIcon = (p: IconProps) => (
     <path d="M6 6l12 12M18 6L6 18" />
   </Icon>
 );
+
+export const CameraIcon = (p: IconProps) => (
+  <Icon strokeWidth={1.8} {...p}>
+    <path d="M4 8h3l2-2.5h6L17 8h3v11H4z" />
+    <circle cx="12" cy="13" r="3.5" />
+  </Icon>
+);
+
+export const UploadIcon = (p: IconProps) => (
+  <Icon strokeWidth={1.8} {...p}>
+    <path d="M12 16V5M7.5 9.5L12 5l4.5 4.5M5 19h14" />
+  </Icon>
+);
+
+export const HistoryIcon = (p: IconProps) => (
+  <Icon strokeWidth={1.8} {...p}>
+    <path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4" />
+    <path d="M12 8v4l3 2" />
+  </Icon>
+);

@@ -11,7 +11,7 @@ export class MemoryMediaStore implements MediaStore {
   async get(key: string) {
     const object = this.objects.get(key);
     if (!object) return null;
-    return { body: new Blob([object.bytes]).stream(), contentType: object.contentType, size: object.bytes.length };
+    return { body: new Blob([new Uint8Array(object.bytes)]).stream(), contentType: object.contentType, size: object.bytes.length };
   }
 
   async delete(key: string) {

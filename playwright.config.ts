@@ -8,7 +8,20 @@ export const E2E = {
   adminEmail: "admin@example.com",
   secret: "e2e-secret-e2e-secret-e2e-secret-e2e-secret",
   dir: ".e2e",
+  /** A second, empty instance used as the restore target for backups (AC-041). */
+  fresh: { baseURL: "http://localhost:3101", dir: ".e2e-fresh" },
 };
+
+const serverEnv = (baseURL: string, dir: string, port: number) => ({
+  PORT: String(port),
+  PUBLIC_BASE_URL: baseURL,
+  ADMIN_EMAILS: E2E.adminEmail,
+  BETTER_AUTH_SECRET: E2E.secret,
+  GOOGLE_CLIENT_ID: "e2e",
+  GOOGLE_CLIENT_SECRET: "e2e",
+  DATABASE_PATH: `${dir}/cookbook.db`,
+  MEDIA_DIR: `${dir}/media`,
+});
 
 export default defineConfig({
   testDir: "tests/e2e",
@@ -16,22 +29,23 @@ export default defineConfig({
   workers: 1,
   reporter: [["list"]],
   use: { baseURL: E2E.baseURL, trace: "retain-on-failure" },
-  webServer: {
-    command: `rm -rf ${E2E.dir} && npm run build:node && node hosting/node/server.js`,
-    url: `${E2E.baseURL}/health`,
-    timeout: 180_000,
-    reuseExistingServer: false,
-    env: {
-      PORT: String(PORT),
-      PUBLIC_BASE_URL: E2E.baseURL,
-      ADMIN_EMAILS: E2E.adminEmail,
-      BETTER_AUTH_SECRET: E2E.secret,
-      GOOGLE_CLIENT_ID: "e2e",
-      GOOGLE_CLIENT_SECRET: "e2e",
-      DATABASE_PATH: `${E2E.dir}/cookbook.db`,
-      MEDIA_DIR: `${E2E.dir}/media`,
+  webServer: [
+    {
+      command: `rm -rf ${E2E.dir} ${E2E.fresh.dir} && npm run build:node && node hosting/node/server.js`,
+      url: `${E2E.baseURL}/health`,
+      timeout: 180_000,
+      reuseExistingServer: false,
+      env: serverEnv(E2E.baseURL, E2E.dir, PORT),
     },
-  },
+    {
+      // Waits for the first server's build, then starts an empty instance.
+      command: `until [ -f build/server/index.js ] && curl -sf ${E2E.baseURL}/health > /dev/null; do sleep 1; done; node hosting/node/server.js`,
+      url: `${E2E.fresh.baseURL}/health`,
+      timeout: 240_000,
+      reuseExistingServer: false,
+      env: serverEnv(E2E.fresh.baseURL, E2E.fresh.dir, 3101),
+    },
+  ],
   projects: [
     { name: "setup", testMatch: /seed\.setup\.ts/ },
     { name: "phone-chromium", use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 } }, dependencies: ["setup"] },

@@ -9,5 +9,6 @@ coverage/
 *.log
 .DS_Store
 .e2e/
+.e2e-fresh/
 test-results/
 playwright-report/

@@ -193,6 +193,28 @@ Deferred by plan: photos (M3), version history (M3), markers and serving scaling
 
 **Done when:** AC-006, 041, 044, 050–053, 058, 061 pass, including a restore into a fresh instance; backup/restore procedure documented; no request exceeds free-plan CPU limits.
 
+#### M3 status (2026-11-03, branch `feature/m3-photos-history-backup`)
+
+Verified by automated tests (`npm run check`: 89 unit/integration tests; `npm run test:e2e`: 58 browser checks in Chromium and WebKit at 390, 768 and 1280 px, plus the backup test on desktop):
+
+| Check | How it was verified |
+| --- | --- |
+| AC-006 | Admin uploads a photo in the editor; it shows on the recipe page, in the catalog thumbnail, and to a separate signed-out browser |
+| AC-043 (partial) | The editor has a "Take photo" input that opens the phone camera (`capture="environment"`) and a separate "Upload photos" input that works without a camera. **Real-device camera checks on iPhone Safari, Chrome on iPhone, the Home Screen app and Android remain for the owner's device checklist (M8).** |
+| AC-044 | Adding a photo triggers no AI; the editor says so |
+| Location data | A JPEG carrying GPS/EXIF uploaded through the browser is stored with no EXIF or GPS; the server also strips EXIF/XMP/IPTC/comments from JPEG, PNG and WebP itself (unit-tested with handcrafted files) |
+| AC-050, AC-051 | Every save creates a full version with author, time and optional "what changed" note; dated experiment notes on the recipe page (they don't create versions) |
+| AC-052 | Deleted recipes restore (M2); an unwanted edit is reversed by restoring the earlier version |
+| AC-058 | Restoring creates a new version, keeps every version in between, and refuses with a conflict if the recipe changed since the page loaded |
+| AC-041, AC-053, AC-061 | A downloaded backup zip from one running instance restores into a second, empty instance: same IDs, history, notes, deleted entries, tags, collections, photos and search; restore refuses on a non-empty cookbook and resumes safely if interrupted |
+| AC-048 | A file the browser can't read shows a clear message; the form keeps its content |
+
+Also verified against the Cloudflare build in local workerd with D1 and R2: the new migrations and history backfill, photo upload and serving (unsaved photos admin-only, saved photos public, GPS stripped), versions inside D1 batches, a stale edit adding no version, restore, backup export, and restore refusal on a non-empty cookbook.
+
+Procedure and limits: [backup-restore.md](backup-restore.md). Photos are resized in the browser and the backup zip is built in the browser, so no request does image or archive work on the server. The free-plan CPU limit was already exceeded by normal pages (D16); photo serving adds one small database lookup per image.
+
+Production after merge: `npm run deploy:ci` applies migrations 0003 and 0004 automatically (existing recipes get a first history version).
+
 ### M4 — External tools and approval
 
 - Change-submission engine: queue, approval toggle (default on), proposed-vs-current diff, approve/reject, stale-revision conflicts, retry identifiers.

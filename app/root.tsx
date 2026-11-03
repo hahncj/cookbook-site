@@ -145,6 +145,7 @@ function SiteFooter() {
         <nav aria-label="Account" className="footer-links">
           {viewer?.isAdmin ? (
             <>
+              <Link to="/backup">Backup</Link>
               <Link to="/deleted">Deleted recipes</Link>
               <span className="muted">{viewer.email}</span>
               <SignOutButton />
