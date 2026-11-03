@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>A · Kitchen Notebook — Recipe editor</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,500&amp;family=Public+Sans:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#2B4C9B}a:hover{color:#1F3770}
+</style>
+</helmet>
+<form style="width: 390px; min-height: 1500px; box-sizing: border-box; background: #F7F4EC; color: #1F2430; font-family: 'Public Sans', system-ui, sans-serif; display: flex; flex-direction: column; margin: 0">
+
+  <header style="position: sticky; top: 0; padding: 10px 20px; background: #F7F4EC; border-bottom: 1px solid #D9D3C3; display: flex; align-items: center; justify-content: space-between; gap: 12px">
+    <a href="A-recipe.dc.html" style="min-height: 44px; display: inline-flex; align-items: center; color: #1F2430; text-decoration: none; font-size: 15px">Cancel</a>
+    <h1 style="margin: 0; font-family: 'Newsreader', Georgia, serif; font-weight: 600; font-size: 20px">Edit recipe</h1>
+    <button type="submit" style="min-height: 44px; padding: 0 16px; border: 0; border-radius: 8px; background: #2B4C9B; color: #FFFFFF; font: inherit; font-size: 15px; font-weight: 600">Save</button>
+  </header>
+
+  <div style="padding: 20px; display: flex; flex-direction: column; gap: 22px">
+
+    <fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px">
+      <legend style="padding: 0; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: #3C4252">Type</legend>
+      <div style="display: flex; padding: 3px; border: 1px solid #C9C2AE; border-radius: 10px; background: #FFFDF8; width: fit-content">
+        <label style="min-height: 38px; padding: 0 16px; border-radius: 7px; background: #1F2430; color: #F7F4EC; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px"><input type="radio" name="kind" checked style="margin: 0">Recipe</label>
+        <label style="min-height: 38px; padding: 0 16px; border-radius: 7px; color: #1F2430; font-size: 14px; display: inline-flex; align-items: center; gap: 6px"><input type="radio" name="kind" style="margin: 0">Idea</label>
+      </div>
+    </fieldset>
+
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <label for="ed-title" style="font-size: 13px; font-weight: 600; color: #3C4252">Title</label>
+      <input id="ed-title" type="text" value="Gochujang Butter Noodles" style="height: 48px; padding: 0 12px; border: 1px solid #C9C2AE; border-radius: 8px; background: #FFFDF8; font-family: 'Newsreader', Georgia, serif; font-size: 22px; font-weight: 600; color: #1F2430">
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <label for="ed-desc" style="font-size: 13px; font-weight: 600; color: #3C4252">Description <span style="font-weight: 400; color: #5B6070">(optional)</span></label>
+      <textarea id="ed-desc" rows="2" style="padding: 10px 12px; border: 1px solid #C9C2AE; border-radius: 8px; background: #FFFDF8; font: inherit; font-size: 15px; line-height: 1.45; color: #1F2430; resize: vertical">Glossy, spicy-sweet noodles from pantry staples. The weeknight default.</textarea>
+    </div>
+
+    <section aria-labelledby="ed-photos" style="display: flex; flex-direction: column; gap: 10px">
+      <h2 id="ed-photos" style="margin: 0; font-size: 13px; font-weight: 600; color: #3C4252">Photos</h2>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap">
+        <div style="position: relative; width: 96px; height: 96px">
+          <div role="img" aria-label="Photo placeholder: finished dish" style="width: 96px; height: 96px; border-radius: 8px; background: #C98B5B"></div>
+          <button type="button" aria-label="Remove photo" style="position: absolute; top: -8px; right: -8px; width: 32px; height: 32px; border: 2px solid #F7F4EC; border-radius: 16px; background: #1F2430; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
+        <button type="button" style="width: 96px; height: 96px; border: 1px dashed #8C8572; border-radius: 8px; background: transparent; color: #1F2430; font: inherit; font-size: 13px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Take photo</button>
+        <button type="button" style="width: 96px; height: 96px; border: 1px dashed #8C8572; border-radius: 8px; background: transparent; color: #1F2430; font: inherit; font-size: 13px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V5M7.5 9.5L12 5l4.5 4.5M5 19h14"/></svg>Upload</button>
+      </div>
+      <p style="margin: 0; font-size: 12px; color: #5B6070">JPEG, PNG, WebP or HEIC. Location data is removed. Photos don't trigger AI on their own.</p>
+    </section>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+      <div style="display: flex; flex-direction: column; gap: 6px"><label for="ed-serves" style="font-size: 13px; font-weight: 600; color: #3C4252">Serves</label><input id="ed-serves" type="text" inputmode="numeric" value="2" style="height: 44px; padding: 0 10px; border: 1px solid #C9C2AE; border-radius: 8px; background: #FFFDF8; font: inherit; font-size: 16px; color: #1F2430"></div>
+      <div style="display: flex; flex-direction: column; gap: 6px"><label for="ed-prep" style="font-size: 13px; font-weight: 600; color: #3C4252">Prep</label><input id="ed-prep" type="text" value="10 min" style="height: 44px; padding: 0 10px; border: 1px solid #C9C2AE; border-radius: 8px; background: #FFFDF8; font: inherit; font-size: 16px; color: #1F2430"></div>
+      <div style="display: flex; flex-direction: column; gap: 6px"><label for="ed-cook" style="font-size: 13px; font-weight: 600; color: #3C4252">Cook</label><input id="ed-cook" type="text" value="10 min" style="height: 44px; padding: 0 10px; border: 1px solid #C9C2AE; border-radius: 8px; background: #FFFDF8; font: inherit; font-size: 16px; color: #1F2430"></div>
+    </div>
+
+    <section aria-labelledby="ed-ing" style="display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+        <h2 id="ed-ing" style="margin: 0; font-family: 'Newsreader', Georgia, serif; font-weight: 600; font-size: 22px">Ingredients</h2>
+        <button type="button" style="min-height: 40px; padding: 0 12px; border: 1px solid #2B4C9B; border-radius: 8px; background: transparent; color: #2B4C9B; font: inherit; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4z"/><path d="M18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z"/></svg>Identify ingredients</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <div style="display: grid; grid-template-columns: 92px 1fr; gap: 8px"><label for="q1" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Amount 1</label><input id="q1" value="6 oz" style="height: 44px; padding: 0 10px; border: 1px solid #C9C2AE; border-radius: 8px; background: #FFFDF8; font: inherit; font-size: 15px; font-weight: 600; color: #1F2430"><label for="n1" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Ingredient 1</label><input id="n1" value="dried wheat noodles" style="height: 44px; padding: 0 10px; border: 1px solid #C9C2AE; border-radius: 8px; background: #FFFDF8; font: inherit; font-size: 15px; color: #1F2430"></div>
+        <div style="display: grid; grid-template-columns: 92px 1fr; gap: 8px"><label for="q2" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Amount 2</label><input id="q2" value="2 tbsp" style="height: 44px; padding: 0 10px; border: 1px solid #C9C2AE; border-radius: 8px; background: #FFFDF8; font: inherit; font-size: 15px; font-weight: 600; color: #1F2430"><label for="n2" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Ingredient 2</label><input id="n2" value="unsalted butter" style="height: 44px; padding: 0 10px; border: 1px solid #C9C2AE; border-radius: 8px; background: #FFFDF8; font: inherit; font-size: 15px; color: #1F2430"></div>
+        <div style="display: grid; grid-template-columns: 92px 1fr; gap: 8px"><label for="q3" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Amount 3</label><input id="q3" value="1½ tbsp" style="height: 44px; padding: 0 10px; border: 1px solid #C9C2AE; border-radius: 8px; background: #FFFDF8; font: inherit; font-size: 15px; font-weight: 600; color: #1F2430"><label for="n3" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Ingredient 3</label><input id="n3" value="gochujang" style="height: 44px; padding: 0 10px; border: 1px solid #C9C2AE; border-radius: 8px; background: #FFFDF8; font: inherit; font-size: 15px; color: #1F2430"></div>
+        <button type="button" style="min-height: 40px; border: 1px dashed #8C8572; border-radius: 8px; background: transparent; color: #1F2430; font: inherit; font-size: 14px">+ Add ingredient</button>
+      </div>
+
+      <div role="region" aria-label="AI ingredient suggestions" style="padding: 14px; border: 1px solid #9DB0DA; border-radius: 10px; background: #EEF2FA; display: flex; flex-direction: column; gap: 10px">
+        <p style="margin: 0; font-size: 13px; color: #1F3770"><strong>Suggestions from your photo.</strong> Amounts are left blank — a photo can't show quantities. Review before adding.</p>
+        <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 15px">
+          <li style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span>scallions</span><span style="display: flex; gap: 6px"><button type="button" style="min-height: 36px; padding: 0 12px; border: 0; border-radius: 8px; background: #2B4C9B; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 600">Add</button><button type="button" style="min-height: 36px; padding: 0 12px; border: 1px solid #9DB0DA; border-radius: 8px; background: transparent; color: #1F2430; font: inherit; font-size: 13px">Dismiss</button></span></li>
+          <li style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span>sesame seeds <span style="display: block; font-size: 12px; color: #6B5A1E; font-weight: 600">Unsure — could be nigella seeds</span></span><span style="display: flex; gap: 6px"><button type="button" style="min-height: 36px; padding: 0 12px; border: 0; border-radius: 8px; background: #2B4C9B; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 600">Add</button><button type="button" style="min-height: 36px; padding: 0 12px; border: 1px solid #9DB0DA; border-radius: 8px; background: transparent; color: #1F2430; font: inherit; font-size: 13px">Dismiss</button></span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section aria-labelledby="ed-steps" style="display: flex; flex-direction: column; gap: 8px">
+      <h2 id="ed-steps" style="margin: 0; font-family: 'Newsreader', Georgia, serif; font-weight: 600; font-size: 22px">Method</h2>
+      <label for="ed-steps-text" style="font-size: 13px; color: #5B6070">One step per line</label>
+      <textarea id="ed-steps-text" rows="5" style="padding: 10px 12px; border: 1px solid #C9C2AE; border-radius: 8px; background: #FFFDF8; font: inherit; font-size: 15px; line-height: 1.5; color: #1F2430; resize: vertical">Cook the noodles in salted boiling water until just tender…
+In the same pot over medium-low heat, melt the butter…
+Whisk in the gochujang, soy sauce and honey…</textarea>
+    </section>
+
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <label for="ed-tags" style="font-size: 13px; font-weight: 600; color: #3C4252">Tags</label>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px; padding: 6px; border: 1px solid #C9C2AE; border-radius: 8px; background: #FFFDF8">
+        <span style="display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 4px 0 10px; border-radius: 16px; background: #EFE9DA; font-size: 13px">Weeknight<button type="button" aria-label="Remove tag Weeknight" style="width: 28px; height: 28px; border: 0; border-radius: 14px; background: transparent; color: #1F2430">×</button></span>
+        <span style="display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 4px 0 10px; border-radius: 16px; background: #EFE9DA; font-size: 13px">Noodles<button type="button" aria-label="Remove tag Noodles" style="width: 28px; height: 28px; border: 0; border-radius: 14px; background: transparent; color: #1F2430">×</button></span>
+        <input id="ed-tags" placeholder="Add tag" style="flex: 1; min-width: 90px; height: 32px; border: 0; background: transparent; font: inherit; font-size: 14px; color: #1F2430">
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <label for="ed-coll" style="font-size: 13px; font-weight: 600; color: #3C4252">Collections</label>
+      <select id="ed-coll" style="height: 44px; padding: 0 10px; border: 1px solid #C9C2AE; border-radius: 8px; background: #FFFDF8; font: inherit; font-size: 15px; color: #1F2430"><option>Weeknight rotation</option></select>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <label for="ed-src" style="font-size: 13px; font-weight: 600; color: #3C4252">Source link <span style="font-weight: 400; color: #5B6070">(optional)</span></label>
+      <input id="ed-src" type="url" placeholder="https://" style="height: 44px; padding: 0 10px; border: 1px solid #C9C2AE; border-radius: 8px; background: #FFFDF8; font: inherit; font-size: 15px; color: #1F2430">
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 8px; background: #EFE9DA">
+      <label for="ed-note" style="font-size: 13px; font-weight: 600; color: #3C4252">What changed? <span style="font-weight: 400; color: #5B6070">(saved with this version)</span></label>
+      <input id="ed-note" type="text" value="Added photo; less honey" style="height: 44px; padding: 0 10px; border: 1px solid #C9C2AE; border-radius: 8px; background: #FFFDF8; font: inherit; font-size: 15px; color: #1F2430">
+    </div>
+  </div>
+</form>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1500}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

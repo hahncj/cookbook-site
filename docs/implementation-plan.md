@@ -23,7 +23,8 @@ Milestones are implemented one at a time. Each milestone starts only when the ow
 | D13 | Lose It!: copy/paste is acceptable **only if the whole ingredient list transfers in one paste**. Gate: the owner tests the Lose It! Text Importer with a multi-line sample before M6. If it accepts only one ingredient at a time, the feature is dropped. |
 | D14 | AI ingredient identification works on **new and existing** recipes. Suggestions never overwrite existing ingredients without review. |
 | D15 | Database is **Cloudflare D1** (owner choice), accessed only through an adapter. D1 is a documented Cloudflare dependency. |
-| D16 | Use the **Cloudflare Workers free plan**. If measured CPU time exceeds free-plan limits, moving to the paid plan is the owner's decision. |
+| D16 | Use the **Cloudflare Workers free plan**. If measured CPU time exceeds free-plan limits, moving to the paid plan is the owner's decision. **2026-11-03:** measured production CPU exceeds the 10 ms limit (medians 11–34 ms; see M0 status) with no failures observed; the owner chose to **stay on the free plan and watch for errors** (Cloudflare error 1102 / `exceededCpu`). Revisit if failures appear. |
+| D17 | **Visual direction A · Kitchen Notebook** (approved 2026-11-03) with a **viewer-selectable theme**: System default (follows the device), Light, or Dark. Proposed: the choice is remembered on the device for any visitor. Mockups and palettes: [design/m1/](../design/m1/README.md). |
 
 ## Technology stack
 
@@ -100,27 +101,37 @@ Each milestone ends with its completion criteria verified and reported against t
 **Done when:** both deployments are live and reach their databases; both AI apps connect and call the dummy tool; measured CPU times are recorded with a verdict on free-plan fit; the core-isolation check passes.
 **Needs from the owner:** Cloudflare account with the domain, Google OAuth client, Anthropic API key, ChatGPT/Claude.ai connector access. No purchases by the implementer.
 
-#### M0 status (2026-11-03, branch `feature/m0-foundation`)
+#### M0 status (2026-11-03; PRs #1–#4)
 
 Verified locally:
 
-- [x] Typecheck, lint, and 17 automated tests pass (`npm run check`).
+- [x] Typecheck, lint, and 20 automated tests pass (`npm run check`).
 - [x] Core-isolation lint rule rejects Cloudflare, framework, driver, and provider imports in `server/core`.
 - [x] Cloudflare build runs in the local Workers runtime (workerd) with local D1 and R2: `/health` ok, pages render, noindex header and meta present.
 - [x] Node build runs locally and in Docker (`hosting/node/Dockerfile`), applying migrations to a SQLite file on a volume.
 - [x] MCP OAuth flow end to end in tests: client registration, PKCE authorization, consent, token exchange, and an authenticated `ping` call; tokens for another audience are rejected.
 - [x] OAuth discovery metadata advertises CIMD, dynamic client registration, and PKCE S256; `/mcp` returns the RFC 9728 401 challenge.
 - [x] Admin-only sign-in gate unit-tested (non-admin Google accounts rejected; matching is case-insensitive).
-- [x] CPU proxy on Node (same V8 engine): median 1.5–3 ms per request; first request in a fresh process 7–14 ms. These figures include building services per request, which the Worker does (reusing them across requests caused an intermittent sign-in hang in production; see `hosting/cloudflare/worker.ts`).
+Verified in production (cookbook.chrisandelissa.com, Worker `cookbook-site`):
 
-Waiting on owner setup (steps in [deployment.md](deployment.md)):
+- [x] D1 database and R2 bucket created; Worker deployed; `/health` ok (database and media).
+- [x] Real Google sign-in as an admin (`ADMIN_EMAILS` is a Wrangler secret; the consent screen is External, in Testing, with admin test users).
+- [x] Claude.ai (via CIMD) and ChatGPT connectors connected through OAuth.
+- [x] D1 Time Travel available (`wrangler d1 time-travel info` returns a restore bookmark).
+- [x] Free-plan CPU measured with `wrangler tail` (54 requests, all `ok`): median `/health` 13.5 ms, home page 34 ms, `/mcp` (no token) 11 ms; ranges 5–99 ms. **This exceeds the 10 ms free-plan limit.** The earlier Node estimate (1.5–3 ms) underestimated Workers CPU by about 10×. Owner decision (D16): stay on the free plan and watch for errors.
 
-- [ ] Google OAuth client created; real Google sign-in tested.
-- [ ] D1 database and R2 bucket created; Worker deployed at cookbook.chrisandelissa.com; `/health` ok.
-- [ ] Claude.ai and ChatGPT connectors connected; `ping` called from each.
-- [ ] Free-plan CPU times measured on the deployed Worker; verdict recorded here.
-- [ ] D1 Time Travel restore confirmed.
-- [ ] Docker image deployed to a disposable alternative host (can also wait for M8).
+Remaining:
+
+- [ ] `ping` called from each connector (owner to confirm).
+- [ ] A D1 Time Travel restore actually performed (owner's choice; restoring to the current bookmark loses nothing).
+- [ ] Docker image deployed to a disposable alternative host (deferred to M8).
+
+Problems found and fixed during deployment:
+
+- PR #3: reusing one Better Auth instance across requests hung sign-in on a fresh production isolate (Workers cannot resolve a promise across requests). Services are now built per request; this is the main per-request CPU cost.
+- PR #4: CIMD metadata fetch passed `redirect: "error"`, which Workers do not support, so Claude.ai could not connect. The Workers fetcher now uses `"manual"` and refuses redirects itself.
+
+Watching for CPU errors: in the Cloudflare dashboard, Workers & Pages → cookbook-site → Metrics shows errors; `npx wrangler tail cookbook-site --format json` shows `"outcome": "exceededCpu"` for any request stopped by the limit.
 
 Notes: React Router's Workers rendering needed a custom `app/entry.server.tsx`. `requireMcpAuth` from `@better-auth/mcp` is not used because it fetches signing keys from the Worker's own URL, which a Worker cannot do; `server/mcp/endpoint.ts` verifies tokens with in-process keys instead.
 
@@ -130,14 +141,24 @@ Notes: React Router's Workers rendering needed a custom `app/entry.server.tsx`. 
 
 **Done when:** the owner approves a direction (AC-021). Styling is not applied app-wide before approval.
 
+#### M1 status (2026-11-03, branch `feature/m1-design-direction`)
+
+- [x] Round 1: three directions (Kitchen Notebook, Market Bold, Night Kitchen), each with a phone catalog and recipe page, using shared sample content with photo, no-photo, and idea entries.
+- [x] Owner chose A and added a viewer-selectable dark mode (D17).
+- [x] Round 2 in direction A: dark catalog and recipe; recipe editor; AI review queue; connector consent page; desktop catalog with the theme menu; empty, loading, and error states.
+- [x] **Owner approved the direction (AC-021).**
+
+Sources are committed in `design/m1/` and viewable on the private design canvas. Photos are placeholders. M2 turns the palettes and type in `design/m1/README.md` into app styles.
+
 ### M2 — Core catalog
 
+- Design system from the approved direction (D17): light and dark color tokens, Newsreader and Public Sans, and the System / Light / Dark preference, applied server-side from a cookie so pages never flash the wrong theme (AC-071, AC-072).
 - Public browsing, FTS5 search, filters by tag and collection, recipe detail with schema.org Recipe markup, noindex.
 - Admin editor for recipes and ideas (title-only ideas allowed), links, tags, collections.
 - Soft delete (inactive records) and a recovery view.
 - Server-side authorization on every write.
 
-**Done when:** AC-001, 003, 005 (excluding photos), 009, 022, 023, 026, 027, 037, 062–065, 068, 069 pass.
+**Done when:** AC-001, 003, 005 (excluding photos), 009, 022, 023, 026, 027, 037, 062–065, 068, 069, 071, 072 pass.
 
 ### M3 — Photos, history, backup
 

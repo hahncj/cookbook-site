@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>A · Kitchen Notebook — Connect an AI tool</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,500&amp;family=Public+Sans:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#2B4C9B}a:hover{color:#1F3770}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F7F4EC; color: #1F2430; font-family: 'Public Sans', system-ui, sans-serif; display: flex; flex-direction: column; padding: 28px 24px 24px; gap: 22px">
+
+  <p style="margin: 0; font-family: 'Newsreader', Georgia, serif; font-weight: 600; font-size: 22px">Cookbook</p>
+
+  <main style="flex: 1; display: flex; flex-direction: column; gap: 18px">
+    <div aria-hidden="true" style="width: 56px; height: 56px; border-radius: 14px; background: #FFFDF8; border: 1px solid #C9C2AE; display: flex; align-items: center; justify-content: center; color: #2B4C9B">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7H6a3 3 0 0 0 0 6h3M15 7h3a3 3 0 0 1 0 6h-3M8 10h8"/></svg>
+    </div>
+    <h1 style="margin: 0; font-family: 'Newsreader', Georgia, serif; font-weight: 600; font-size: 32px; line-height: 1.1">Connect Claude to your cookbook?</h1>
+    <p style="margin: 0; font-size: 15px; color: #5B6070">Claude · claude.ai</p>
+
+    <section aria-labelledby="cs-can" style="padding: 16px; border: 1px solid #C9C2AE; border-radius: 10px; background: #FFFDF8; display: flex; flex-direction: column; gap: 10px">
+      <h2 id="cs-can" style="margin: 0; font-size: 14px; font-weight: 600">Claude will be able to</h2>
+      <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 15px; line-height: 1.4">
+        <li style="display: flex; gap: 8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3F6B3A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; margin-top: 2px"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Read and search your recipes</li>
+        <li style="display: flex; gap: 8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3F6B3A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; margin-top: 2px"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Send new recipes and changes for your review</li>
+      </ul>
+      <h2 style="margin: 6px 0 0; font-size: 14px; font-weight: 600">It can't</h2>
+      <p style="margin: 0; font-size: 14px; line-height: 1.45; color: #3C4252">Approve its own submissions, delete recipes, or change your settings.</p>
+    </section>
+
+    <p style="margin: 0; font-size: 14px; color: #5B6070">Signed in as hahncj76@gmail.com. You can disconnect it anytime in Settings → Connected tools.</p>
+  </main>
+
+  <div style="display: flex; flex-direction: column; gap: 10px">
+    <button type="button" style="min-height: 52px; border: 0; border-radius: 10px; background: #2B4C9B; color: #FFFFFF; font: inherit; font-size: 16px; font-weight: 600">Allow</button>
+    <button type="button" style="min-height: 52px; border: 1px solid #C9C2AE; border-radius: 10px; background: transparent; color: #1F2430; font: inherit; font-size: 16px">Don't allow</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

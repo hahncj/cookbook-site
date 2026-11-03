@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>C · Night Kitchen — Catalog</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#F2B13D}a:hover{color:#FFD07A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #15161A; color: #F2EFE8; font-family: 'Manrope', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden">
+
+  <header style="padding: 20px 18px 12px; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+      <h1 style="margin: 0; font-weight: 800; font-size: 26px; letter-spacing: -0.02em; display: inline-flex; align-items: center; gap: 8px">
+        <span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 5px; background: #F2B13D"></span>Cookbook
+      </h1>
+      <div style="display: flex; gap: 8px">
+        <a href="#review" style="display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 12px; border-radius: 12px; background: #24262C; color: #F2EFE8; text-decoration: none; font-size: 14px; font-weight: 600">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13h4l1.5 2.5h5L16 13h4M4 13l2.5-7h11L20 13v6H4z"/></svg>
+          2 to review
+        </a>
+        <button type="button" aria-label="Add recipe" style="width: 44px; height: 44px; border: 0; border-radius: 12px; background: #F2B13D; color: #15161A; display: inline-flex; align-items: center; justify-content: center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+    </div>
+    <div style="position: relative">
+      <label for="c-search" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap">Search recipes</label>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A9A9B2" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="position: absolute; left: 14px; top: 14px"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="c-search" type="search" placeholder="Search titles, ingredients, notes" style="width: 100%; box-sizing: border-box; height: 48px; padding: 0 14px 0 44px; border: 1px solid #34363E; border-radius: 12px; background: #1F2126; font: inherit; font-size: 16px; color: #F2EFE8">
+    </div>
+    <nav aria-label="Filters" style="display: flex; gap: 8px; overflow-x: auto">
+      <button type="button" style="flex: none; height: 36px; padding: 0 14px; border: 0; border-radius: 10px; background: #F2EFE8; color: #15161A; font: inherit; font-size: 14px; font-weight: 700">All 48</button>
+      <button type="button" style="flex: none; height: 36px; padding: 0 14px; border: 1px solid #34363E; border-radius: 10px; background: transparent; color: #F2EFE8; font: inherit; font-size: 14px">Favorites</button>
+      <button type="button" style="flex: none; height: 36px; padding: 0 14px; border: 1px solid #34363E; border-radius: 10px; background: transparent; color: #F2EFE8; font: inherit; font-size: 14px">Want to try</button>
+      <button type="button" style="flex: none; height: 36px; padding: 0 14px; border: 1px solid #34363E; border-radius: 10px; background: transparent; color: #F2EFE8; font: inherit; font-size: 14px">Weeknight</button>
+    </nav>
+  </header>
+
+  <main style="flex: 1; overflow: hidden; padding: 4px 18px 0; display: flex; flex-direction: column; gap: 12px">
+    <a href="C-recipe.dc.html" style="display: flex; flex-direction: column; border-radius: 16px; background: #1F2126; overflow: hidden; color: inherit; text-decoration: none">
+      <div role="img" aria-label="Photo placeholder: finished noodles" style="height: 170px; background: #8E5530; display: flex; align-items: flex-end; padding: 10px 12px; box-sizing: border-box; font-size: 10px; font-weight: 700; color: #FFF3E3; letter-spacing: 0.08em">PHOTO</div>
+      <div style="padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 6px">
+        <h2 style="margin: 0; font-weight: 800; font-size: 21px; line-height: 1.15; letter-spacing: -0.01em">Gochujang Butter Noodles</h2>
+        <p style="margin: 0; display: flex; gap: 12px; align-items: center; font-size: 13px; color: #A9A9B2">
+          <span>20 min · Serves 2</span>
+          <span style="display: inline-flex; align-items: center; gap: 4px; color: #F2B13D; font-weight: 700"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>Favorite</span>
+          <span style="display: inline-flex; align-items: center; gap: 4px; color: #7FD1A8; font-weight: 700"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>4×</span>
+        </p>
+      </div>
+    </a>
+
+    <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
+      <li>
+        <a href="#" style="display: flex; gap: 12px; align-items: center; padding: 10px; border-radius: 14px; background: #1F2126; color: inherit; text-decoration: none">
+          <div role="img" aria-label="Photo placeholder: roasted chicken" style="flex: none; width: 60px; height: 60px; border-radius: 10px; background: #7A6B33"></div>
+          <div style="min-width: 0; display: flex; flex-direction: column; gap: 3px">
+            <h2 style="margin: 0; font-weight: 700; font-size: 16px">Sheet-Pan Lemon Chicken with Olives</h2>
+            <p style="margin: 0; font-size: 13px; color: #A9A9B2">45 min · Serves 4 · <span style="color: #7FD1A8; font-weight: 700">Made 2×</span></p>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a href="#" style="display: flex; gap: 12px; align-items: center; padding: 10px; border-radius: 14px; background: #1F2126; color: inherit; text-decoration: none">
+          <div aria-hidden="true" style="flex: none; width: 60px; height: 60px; border-radius: 10px; border: 1px solid #34363E; box-sizing: border-box; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 20px; color: #9DB7FF">BB</div>
+          <div style="min-width: 0; display: flex; flex-direction: column; gap: 3px">
+            <h2 style="margin: 0; font-weight: 700; font-size: 16px">Weeknight Black Bean Chili</h2>
+            <p style="margin: 0; font-size: 13px; color: #A9A9B2">35 min · Serves 6 · <span style="color: #9DB7FF; font-weight: 700">Want to try</span></p>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a href="#" style="display: flex; gap: 12px; align-items: center; padding: 10px; border-radius: 14px; border: 1px dashed #4A4C55; color: inherit; text-decoration: none">
+          <div aria-hidden="true" style="flex: none; width: 60px; height: 60px; border-radius: 10px; background: #24262C; display: flex; align-items: center; justify-content: center; color: #F2B13D"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg></div>
+          <div style="min-width: 0; display: flex; flex-direction: column; gap: 3px">
+            <h2 style="margin: 0; font-weight: 700; font-size: 16px">Miso caramel over grilled peaches?</h2>
+            <p style="margin: 0; font-size: 13px; color: #A9A9B2">Idea · no recipe yet</p>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a href="#" style="display: flex; gap: 12px; align-items: center; padding: 10px; border-radius: 14px; background: #1F2126; color: inherit; text-decoration: none">
+          <div aria-hidden="true" style="flex: none; width: 60px; height: 60px; border-radius: 10px; border: 1px solid #34363E; box-sizing: border-box; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 20px; color: #F2B13D">SC</div>
+          <div style="min-width: 0; display: flex; flex-direction: column; gap: 3px">
+            <h2 style="margin: 0; font-weight: 700; font-size: 16px">Smoky Chipotle Salsa</h2>
+            <p style="margin: 0; font-size: 13px; color: #A9A9B2">15 min · Makes 2 cups · Sauces</p>
+          </div>
+        </a>
+      </li>
+    </ul>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -107,3 +107,8 @@ Use sample recipes and mocked AI responses for repeatable automated checks. Veri
 - **AC-068** Saving a catalog entry makes it available for public browsing without a separate publish action.
 - **AC-069** No recipe draft status or draft-management interface is required.
 - **AC-070** Pending AI submissions remain nonpublic until approved; with approval disabled, successfully applied submissions become publicly browsable immediately.
+
+## Appearance — Confirmed 2026-11-03
+
+- **AC-071** Viewers can choose System default, Light, or Dark. System default follows the device setting and is used until a choice is made.
+- **AC-072** Both themes meet the contrast and focus requirements (AC-037) on every screen, and pages do not flash the wrong theme while loading.

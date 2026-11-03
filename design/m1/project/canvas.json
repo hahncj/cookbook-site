@@ -1,0 +1,46 @@
+{
+  "v": 3,
+  "attachments": {},
+  "createdOnFiles": { "at": "2026-11-03T20:28:43.662Z", "v": 1 },
+  "title": "Cookbook design directions",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 260, "w": 390, "h": 844, "title": "A · Catalog (phone)" },
+    "A-recipe.dc.html": { "x": 470, "y": 260, "w": 390, "h": 1560, "title": "A · Recipe (phone)" },
+    "A-catalog-dark.dc.html": { "x": 1000, "y": 260, "w": 390, "h": 844, "title": "A dark · Catalog (phone)" },
+    "A-recipe-dark.dc.html": { "x": 1470, "y": 260, "w": 390, "h": 1560, "title": "A dark · Recipe (phone)" },
+    "A-editor.dc.html": { "x": 1940, "y": 260, "w": 390, "h": 1500, "title": "A · Recipe editor (phone)" },
+    "A-review.dc.html": { "x": 2410, "y": 260, "w": 390, "h": 1300, "title": "A dark · Review AI submission (phone)" },
+    "A-consent.dc.html": { "x": 2880, "y": 260, "w": 390, "h": 844, "title": "A · Connect an AI tool (phone)" },
+    "A-desktop.dc.html": { "x": 1000, "y": 2200, "w": 1280, "h": 960, "title": "A · Catalog (desktop)", "expand": "fill" },
+    "A-states.dc.html": { "x": 2360, "y": 2200, "w": 1250, "h": 844, "title": "A · Empty, loading, error (phone)" },
+    "B-catalog.dc.html": { "x": 0, "y": 2200, "w": 390, "h": 844, "title": "B · Catalog (phone)" },
+    "B-recipe.dc.html": { "x": 470, "y": 2200, "w": 390, "h": 1560, "title": "B · Recipe (phone)" },
+    "C-catalog.dc.html": { "x": 0, "y": 4140, "w": 390, "h": 844, "title": "C · Catalog (phone)" },
+    "C-recipe.dc.html": { "x": 470, "y": 4140, "w": 390, "h": 1560, "title": "C · Recipe (phone)" }
+  },
+  "order": [
+    "Main.dc.html",
+    "A-recipe.dc.html",
+    "A-catalog-dark.dc.html",
+    "A-recipe-dark.dc.html",
+    "A-editor.dc.html",
+    "A-review.dc.html",
+    "A-consent.dc.html",
+    "A-desktop.dc.html",
+    "A-states.dc.html",
+    "B-catalog.dc.html",
+    "B-recipe.dc.html",
+    "C-catalog.dc.html",
+    "C-recipe.dc.html"
+  ],
+  "notes": {
+    "dirA": { "x": 0, "y": 0, "text": "A · Kitchen Notebook", "kind": "title1", "maxW": 860 },
+    "r2a": { "x": 1000, "y": 0, "text": "A · Dark mode & remaining screens", "kind": "title1", "maxW": 2270 },
+    "r2b": { "x": 1000, "y": 1940, "text": "A · Desktop & states", "kind": "title1", "maxW": 2610 },
+    "dirB": { "x": 0, "y": 1940, "text": "B · Market Bold", "kind": "title1", "maxW": 860 },
+    "dirC": { "x": 0, "y": 3880, "text": "C · Night Kitchen", "kind": "title1", "maxW": 860 }
+  },
+  "designSystems": []
+}

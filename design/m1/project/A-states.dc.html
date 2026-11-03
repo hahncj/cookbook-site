@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>A · Kitchen Notebook — Empty, loading, error</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,500&amp;family=Public+Sans:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#2B4C9B}a:hover{color:#1F3770}
+</style>
+</helmet>
+<div style="width: 1250px; height: 844px; box-sizing: border-box; background: #E9E4D8; display: flex; gap: 40px; font-family: 'Public Sans', system-ui, sans-serif; color: #1F2430">
+
+  <section aria-label="Empty cookbook" style="width: 390px; height: 844px; box-sizing: border-box; background: #F7F4EC; display: flex; flex-direction: column">
+    <header style="padding: 20px; border-bottom: 1px solid #D9D3C3"><p style="margin: 0; font-family: 'Newsreader', Georgia, serif; font-weight: 600; font-size: 32px">Cookbook</p></header>
+    <div style="flex: 1; padding: 48px 28px; display: flex; flex-direction: column; gap: 16px">
+      <h1 style="margin: 0; font-family: 'Newsreader', Georgia, serif; font-weight: 600; font-size: 30px; line-height: 1.15">A fresh notebook.</h1>
+      <p style="margin: 0; font-size: 16px; line-height: 1.5; color: #3C4252">Bring your recipes home from your AI chats. Start with any of these:</p>
+      <div style="display: flex; flex-direction: column; gap: 10px; padding-top: 8px">
+        <a href="A-editor.dc.html" style="min-height: 52px; padding: 0 16px; border-radius: 10px; background: #2B4C9B; color: #FFFFFF; text-decoration: none; font-size: 16px; font-weight: 600; display: flex; align-items: center">Add a recipe</a>
+        <a href="#" style="min-height: 52px; padding: 0 16px; border: 1px solid #C9C2AE; border-radius: 10px; background: #FFFDF8; color: #1F2430; text-decoration: none; font-size: 16px; display: flex; flex-direction: column; justify-content: center"><span>Paste from an old chat</span><span style="font-size: 13px; color: #5B6070">Copy a recipe out of ChatGPT or Claude</span></a>
+        <a href="#" style="min-height: 52px; padding: 0 16px; border: 1px solid #C9C2AE; border-radius: 10px; background: #FFFDF8; color: #1F2430; text-decoration: none; font-size: 16px; display: flex; flex-direction: column; justify-content: center"><span>Connect an AI tool</span><span style="font-size: 13px; color: #5B6070">Let chats send recipes for your review</span></a>
+      </div>
+    </div>
+  </section>
+
+  <section aria-label="Loading" style="width: 390px; height: 844px; box-sizing: border-box; background: #F7F4EC; display: flex; flex-direction: column">
+    <header style="padding: 20px; border-bottom: 1px solid #D9D3C3; display: flex; flex-direction: column; gap: 14px"><p style="margin: 0; font-family: 'Newsreader', Georgia, serif; font-weight: 600; font-size: 32px">Cookbook</p><div style="height: 44px; border: 1px solid #C9C2AE; border-radius: 8px; background: #FFFDF8"></div></header>
+    <p role="status" style="margin: 0; padding: 16px 20px 0; font-size: 13px; color: #5B6070">Loading recipes…</p>
+    <ul aria-hidden="true" style="list-style: none; margin: 0; padding: 0 20px">
+      <li style="display: flex; gap: 14px; align-items: center; padding: 18px 0; border-bottom: 1px solid #D9D3C3"><div style="flex: 1; display: flex; flex-direction: column; gap: 8px"><div style="height: 18px; width: 75%; border-radius: 4px; background: #E6E0D1"></div><div style="height: 12px; width: 50%; border-radius: 4px; background: #EDE8DC"></div></div><div style="width: 76px; height: 76px; border-radius: 6px; background: #E6E0D1"></div></li>
+      <li style="display: flex; gap: 14px; align-items: center; padding: 18px 0; border-bottom: 1px solid #D9D3C3"><div style="flex: 1; display: flex; flex-direction: column; gap: 8px"><div style="height: 18px; width: 85%; border-radius: 4px; background: #E6E0D1"></div><div style="height: 12px; width: 40%; border-radius: 4px; background: #EDE8DC"></div></div><div style="width: 76px; height: 76px; border-radius: 6px; background: #E6E0D1"></div></li>
+      <li style="display: flex; gap: 14px; align-items: center; padding: 18px 0; border-bottom: 1px solid #D9D3C3"><div style="flex: 1; display: flex; flex-direction: column; gap: 8px"><div style="height: 18px; width: 65%; border-radius: 4px; background: #E6E0D1"></div><div style="height: 12px; width: 55%; border-radius: 4px; background: #EDE8DC"></div></div><div style="width: 76px; height: 76px; border-radius: 6px; background: #E6E0D1"></div></li>
+    </ul>
+  </section>
+
+  <section aria-label="Import failed" style="width: 390px; height: 844px; box-sizing: border-box; background: #F7F4EC; display: flex; flex-direction: column">
+    <header style="padding: 10px 20px; border-bottom: 1px solid #D9D3C3; display: flex; align-items: center; justify-content: space-between"><a href="#" style="min-height: 44px; display: inline-flex; align-items: center; color: #1F2430; text-decoration: none; font-size: 15px">Cancel</a><h1 style="margin: 0; font-family: 'Newsreader', Georgia, serif; font-weight: 600; font-size: 20px">Import a recipe</h1><span style="width: 52px"></span></header>
+    <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px">
+      <div role="alert" style="padding: 14px 16px; border: 1px solid #D6A397; border-radius: 10px; background: #F8E7E2; display: flex; flex-direction: column; gap: 6px">
+        <p style="margin: 0; font-size: 15px; font-weight: 600; color: #7A2616">Couldn't read that page</p>
+        <p style="margin: 0; font-size: 14px; line-height: 1.45; color: #5A2A20">The site blocked the request. Nothing was saved and nothing was guessed. Your link is kept below.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="st-url" style="font-size: 13px; font-weight: 600; color: #3C4252">Recipe link</label>
+        <input id="st-url" type="url" value="https://example-food-site.com/crispy-rice-salad" style="height: 44px; padding: 0 10px; border: 1px solid #C9C2AE; border-radius: 8px; background: #FFFDF8; font: inherit; font-size: 15px; color: #1F2430">
+      </div>
+      <button type="button" style="min-height: 48px; border: 1px solid #C9C2AE; border-radius: 10px; background: #FFFDF8; color: #1F2430; font: inherit; font-size: 15px">Try again</button>
+      <p style="margin: 0; font-size: 14px; color: #3C4252">Or paste the recipe text instead:</p>
+      <label for="st-paste" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Recipe text</label>
+      <textarea id="st-paste" rows="6" placeholder="Paste ingredients and steps here" style="padding: 10px 12px; border: 1px solid #C9C2AE; border-radius: 8px; background: #FFFDF8; font: inherit; font-size: 15px; line-height: 1.5; color: #1F2430"></textarea>
+      <button type="button" style="min-height: 52px; border: 0; border-radius: 10px; background: #2B4C9B; color: #FFFFFF; font: inherit; font-size: 16px; font-weight: 600">Read pasted text</button>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1250,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
