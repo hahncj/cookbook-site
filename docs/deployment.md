@@ -7,7 +7,7 @@ How to deploy the cookbook to Cloudflare (primary host) and to the Node/Docker a
 | Name | Kind | Purpose |
 | --- | --- | --- |
 | `PUBLIC_BASE_URL` | var | Public origin, e.g. `https://cookbook.chrisandelissa.com` (no trailing slash) |
-| `ADMIN_EMAILS` | var | Comma-separated admin Google emails (one or two, D5) |
+| `ADMIN_EMAILS` | secret on Cloudflare (keeps emails out of this public repo); env var on Node | Comma-separated admin Google emails (one or two, D5) |
 | `BETTER_AUTH_SECRET` | secret | At least 32 random characters: `openssl rand -base64 32` |
 | `GOOGLE_CLIENT_ID` | secret | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | secret | Google OAuth client secret |
@@ -35,12 +35,16 @@ npx wrangler d1 create cookbook          # copy the printed database_id
 npx wrangler r2 bucket create cookbook-media
 ```
 
-1. In [hosting/cloudflare/wrangler.jsonc](../hosting/cloudflare/wrangler.jsonc), set `database_id` and replace `ADMIN_EMAILS` with the real admin emails.
-2. Set secrets (each command prompts for the value):
+The Worker is named **`cookbook-site`** (the `name` in [wrangler.jsonc](../hosting/cloudflare/wrangler.jsonc), matching the dashboard). Commands below pass `--name cookbook-site` so they can never touch another Worker in the account.
+
+1. In [hosting/cloudflare/wrangler.jsonc](../hosting/cloudflare/wrangler.jsonc), set `database_id`.
+2. Set secrets (each `put` prompts for the value; `secret list` shows names only):
    ```sh
-   npx wrangler secret put BETTER_AUTH_SECRET -c hosting/cloudflare/wrangler.jsonc
-   npx wrangler secret put GOOGLE_CLIENT_ID -c hosting/cloudflare/wrangler.jsonc
-   npx wrangler secret put GOOGLE_CLIENT_SECRET -c hosting/cloudflare/wrangler.jsonc
+   npx wrangler secret put ADMIN_EMAILS --name cookbook-site
+   npx wrangler secret put GOOGLE_CLIENT_ID --name cookbook-site
+   npx wrangler secret put GOOGLE_CLIENT_SECRET --name cookbook-site
+   openssl rand -base64 32 | npx wrangler secret put BETTER_AUTH_SECRET --name cookbook-site
+   npx wrangler secret list --name cookbook-site
    ```
 3. Apply database migrations and deploy:
    ```sh
@@ -56,10 +60,12 @@ The custom domain route in `wrangler.jsonc` creates the DNS record and certifica
 The free plan allows about 10 ms of CPU per request (waiting on the database or network does not count). After deploying:
 
 1. Make a few requests of each kind: load `/`, sign in, and connect an AI tool (section 4) and call `ping`.
-2. In the Cloudflare dashboard, open **Workers & Pages → cookbook → Metrics** and read **CPU time** (median and P99). Alternatively run `npx wrangler tail cookbook --format json` while making requests and read each event's CPU time.
+2. In the Cloudflare dashboard, open **Workers & Pages → cookbook-site → Metrics** and read **CPU time** (median and P99). Alternatively run `npx wrangler tail cookbook-site --format json` while making requests and read each event's CPU time.
 3. Record the results in [implementation-plan.md](implementation-plan.md) under M0 status. Local measurements (Node, same V8 engine): median 1.5–3 ms per request; first request in a fresh process 7–14 ms.
 
 ### Confirm D1 Time Travel restore (M0)
+
+The database is named `cookbook` (separate from the Worker name):
 
 ```sh
 npx wrangler d1 time-travel info cookbook                      # note the current bookmark/timestamp
