@@ -111,7 +111,7 @@ Verified locally:
 - [x] MCP OAuth flow end to end in tests: client registration, PKCE authorization, consent, token exchange, and an authenticated `ping` call; tokens for another audience are rejected.
 - [x] OAuth discovery metadata advertises CIMD, dynamic client registration, and PKCE S256; `/mcp` returns the RFC 9728 401 challenge.
 - [x] Admin-only sign-in gate unit-tested (non-admin Google accounts rejected; matching is case-insensitive).
-- [x] CPU proxy on Node (same V8 engine): median 1.5–3 ms per request; first request in a fresh process 7–14 ms. Services are built once per Worker isolate to keep per-request CPU low.
+- [x] CPU proxy on Node (same V8 engine): median 1.5–3 ms per request; first request in a fresh process 7–14 ms. These figures include building services per request, which the Worker does (reusing them across requests caused an intermittent sign-in hang in production; see `hosting/cloudflare/worker.ts`).
 
 Waiting on owner setup (steps in [deployment.md](deployment.md)):
 
