@@ -67,6 +67,18 @@ The Worker is connected to this repository in **Workers & Pages → cookbook-sit
 
 Pull request branches are **build-only checks**: they confirm the app builds and deploy nothing. Preview deploys are off on purpose. Wrangler refuses to upload a preview unless `wrangler.jsonc` has a `previews` block naming preview-only resources (so previews never touch the production `cookbook` database or `cookbook-media` bucket). Google sign-in also cannot work on preview URLs, because each one is different and Google OAuth does not accept wildcard redirect URIs. If live previews become useful, add a `previews` block with a separate D1 database and R2 bucket, then set the non-production deploy command back to `npx wrangler versions upload`.
 
+### Database migrations before merging
+
+Merging to `main` deploys the Worker automatically, but **does not change the database**. When a pull request adds files under `db/migrations/`, apply them to production **before merging**:
+
+```sh
+npm run db:migrate:remote
+```
+
+Migrations only add tables, columns and indexes, so the version already running keeps working on the newer schema. Applying them after the merge instead leaves the new code briefly running against missing tables (pages that need them return errors until the migration runs).
+
+Note: `wrangler d1 export` cannot export databases that contain virtual tables, and the catalog's full-text index (`recipes_fts`) is one. Use D1 Time Travel for point-in-time recovery; the app's own backup download (M3) covers full exports.
+
 ### Measure CPU time on the free plan (M0)
 
 The free plan allows about 10 ms of CPU per request (waiting on the database or network does not count). After deploying:
@@ -117,7 +129,10 @@ npm install
 cp hosting/cloudflare/.dev.vars.example hosting/cloudflare/.dev.vars   # then fill it in
 npm run db:migrate:local
 npm run dev                # http://localhost:5173 in the Cloudflare runtime (workerd)
-npm run check              # typecheck, lint, tests
+npm run check              # typecheck, lint, unit and integration tests
+npm run test:e2e           # browser checks: layout at phone/tablet/desktop, accessibility, themes, admin flow
 ```
+
+`test:e2e` builds the Node host and runs it on port 3100 against a throwaway database in `.e2e/`. The first run needs browsers: `npx playwright install chromium webkit`.
 
 Use npm 11 or newer (`npx npm@11 install` works if your global npm is older).

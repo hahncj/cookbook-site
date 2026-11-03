@@ -6,6 +6,8 @@ import type { Auth } from "./auth/auth";
 import { AUTH_BASE_PATH, MCP_PATH, createAuth } from "./auth/auth";
 import type { ClientMetadataResourceFetch } from "@better-auth/oauth-provider";
 import { createMcpEndpoint } from "./mcp/endpoint";
+import { createCatalogRepository } from "./adapters/catalog-repo";
+import { createCatalog, type Catalog } from "./core/catalog";
 
 /** Everything a request handler may use. Built per request by the host adapter. */
 export interface Services {
@@ -14,6 +16,7 @@ export interface Services {
   auth: Auth;
   /** Absent when the host has no media storage configured yet. */
   media: MediaStore | null;
+  catalog: Catalog;
 }
 
 export interface HostDeps {
@@ -24,11 +27,13 @@ export interface HostDeps {
 }
 
 export function createServices(deps: HostDeps): Services {
+  const newId = () => crypto.randomUUID();
   return {
     config: deps.config,
     db: deps.db,
     media: deps.media,
     auth: createAuth({ config: deps.config, db: deps.db, fetchClientMetadata: deps.fetchClientMetadata }),
+    catalog: createCatalog({ repo: createCatalogRepository(deps.db, newId), now: () => new Date(), newId }),
   };
 }
 

@@ -12,6 +12,7 @@ A personal recipe collection at cookbook.chrisandelissa.com: public to browse, w
 | --- | --- |
 | `npm run dev` | Local dev server in the Cloudflare runtime (needs `hosting/cloudflare/.dev.vars`) |
 | `npm run check` | Typecheck, lint (including the core-isolation rule), and tests |
+| `npm run test:e2e` | Browser checks (Playwright): layout at phone/tablet/desktop, accessibility in both themes, admin flow |
 | `npm run build` / `npm run deploy` | Build / deploy the Cloudflare Worker |
 | `npm run build:node` / `npm run start:node` | Build / run the Node alternative host |
 | `npm run db:generate` | Create a migration after changing `server/db/` |

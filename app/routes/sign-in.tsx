@@ -1,46 +1,53 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router";
 import { authClient } from "../auth-client";
+import { safeReturnPath } from "../theme";
 
 export function meta() {
   return [{ title: "Sign in · Cookbook" }];
 }
 
 export default function SignIn() {
+  const [params] = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  // An AI tool's connection request arrives with signed OAuth parameters; the
+  // provider plugin resumes that flow after Google. Otherwise return to `next`.
+  const next = safeReturnPath(params.get("next"));
 
   async function signIn() {
     setPending(true);
     setError(null);
-    const fail = (message: string) => {
+    const timer = setTimeout(() => {
       setPending(false);
-      setError(message);
-    };
-    // Never leave the button stuck: if the server does not answer, let the
-    // admin try again.
-    const timer = setTimeout(() => fail("Sign-in is taking too long. Please try again."), 15_000);
+      setError("Sign-in is taking too long. Please try again.");
+    }, 15_000);
     try {
-      // When this page is reached from a connector's OAuth request, the
-      // provider plugin carries the signed query along and resumes that flow
-      // after Google sign-in; otherwise the admin lands back on the home page.
-      const result = await authClient.signIn.social({ provider: "google", callbackURL: "/" });
-      if (result.error) fail(result.error.message ?? "Sign-in failed. Only cookbook admin accounts can sign in.");
-      // On success the client navigates to Google; the page unloads.
+      const result = await authClient.signIn.social({ provider: "google", callbackURL: next });
+      if (result.error) {
+        setPending(false);
+        setError(result.error.message ?? "Sign-in failed. Only cookbook admin accounts can sign in.");
+      }
     } catch {
-      fail("Could not reach the server. Check your connection and try again.");
+      setPending(false);
+      setError("Could not reach the server. Check your connection and try again.");
     } finally {
       clearTimeout(timer);
     }
   }
 
   return (
-    <main>
+    <div className="narrow">
       <h1>Admin sign-in</h1>
-      <p>Only the cookbook's admin Google accounts can sign in. Anyone can browse without signing in.</p>
-      <button type="button" onClick={signIn} disabled={pending}>
+      <p className="muted">Only the cookbook's admin Google accounts can sign in. Anyone can browse without signing in.</p>
+      <button type="button" className="btn btn-primary btn-block" onClick={signIn} disabled={pending}>
         {pending ? "Redirecting to Google…" : "Sign in with Google"}
       </button>
-      {error && <p role="alert">{error}</p>}
-    </main>
+      {error && (
+        <p className="alert" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
