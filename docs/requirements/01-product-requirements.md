@@ -87,6 +87,10 @@ The owner has not requested multiple editing users with separate collections (on
 
 **Proposed direction:** A personal cookbook with strong typography, thoughtful spacing, expressive but restrained color, and prominent recipe photography. This is a starting direction, not an approved visual style. Do not assume a specific palette, font, or theme.
 
+**Confirmed (2026-11-03):** Of three M1 directions, the owner prefers **A · Kitchen Notebook** (paper and ink, Newsreader serif headings with Public Sans text; mockups in `design/m1/`). Final approval of the direction follows the round-2 review.
+
+**Confirmed (2026-11-03, D17):** Offer a dark mode. Viewers choose **System default** (follows the device setting, the default), **Light**, or **Dark**. **Proposed:** the choice is remembered on that device for any visitor, signed in or not.
+
 ## Collection preservation and cooking — Confirmed
 
 - Import existing recipes by pasting content from old chats.

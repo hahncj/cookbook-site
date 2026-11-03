@@ -19,3 +19,19 @@ Photos are labelled placeholders (no real food photography yet).
 ## Round 2 (after a direction is chosen)
 
 Desktop layouts, the recipe editor, the AI approval queue, empty/loading/error states, and the connector consent page, in the chosen direction.
+
+## Round 2 — direction A with dark mode (D17)
+
+The owner chose **A · Kitchen Notebook** and asked for a dark mode viewers can choose (System default, Light, Dark). Round 2 adds, all in direction A:
+
+| Artboard | Theme | Shows |
+| --- | --- | --- |
+| Catalog (phone, dark) | Dark | Dark palette; the Appearance control (System / Light / Dark) |
+| Recipe (phone, dark) | Dark | Reading and cooking in dark |
+| Recipe editor (phone) | Light | Recipe / idea toggle, photos (take or upload), ingredient rows, AI ingredient suggestions with uncertainty and blank amounts, tags, collections, source, "what changed" note |
+| Review AI submission (phone) | Dark | Update from Claude shown as removed/added changes with Approve / Reject; new recipe from ChatGPT with a possible-duplicate notice; recent decisions |
+| Connect an AI tool (phone) | Light | Friendly consent page naming the tool and what it can and can't do |
+| Catalog (desktop) | Light | Wide layout with browse sidebar (stacks on phones) and the open Theme menu |
+| Empty, loading, error (phone) | Light | First-run choices, loading placeholders, and a failed link import that keeps the input and offers paste instead |
+
+Dark palette: background `#171A21`, surface `#1F232C`, text `#ECE6D8`, muted `#A8A397`, accent `#8EA8E8` (dark text on accent buttons), favorite `#F08A6E`, made `#9CC48F`, flags `#E2C77A`.
