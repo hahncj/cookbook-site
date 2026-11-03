@@ -61,7 +61,7 @@ The free plan allows about 10 ms of CPU per request (waiting on the database or 
 
 1. Make a few requests of each kind: load `/`, sign in, and connect an AI tool (section 4) and call `ping`.
 2. In the Cloudflare dashboard, open **Workers & Pages → cookbook-site → Metrics** and read **CPU time** (median and P99). Alternatively run `npx wrangler tail cookbook-site --format json` while making requests and read each event's CPU time.
-3. Record the results in [implementation-plan.md](implementation-plan.md) under M0 status. Local measurements (Node, same V8 engine): median 1.5–3 ms per request; first request in a fresh process 7–14 ms.
+3. Record the results in [implementation-plan.md](implementation-plan.md) under M0 status. Local Node measurements are not a reliable proxy: they read about 10× lower than production. Measured production medians on 2026-11-03 were 11–34 ms.
 
 ### Confirm D1 Time Travel restore (M0)
 
