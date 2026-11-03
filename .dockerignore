@@ -1,0 +1,8 @@
+node_modules
+build
+.wrangler
+.react-router
+data
+**/.dev.vars
+.env
+.git

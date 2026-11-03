@@ -1,0 +1,3 @@
+# Decision D10: this cookbook is public to visit but not to be indexed.
+User-agent: *
+Disallow: /
