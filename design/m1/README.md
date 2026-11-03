@@ -16,10 +16,6 @@ Each direction has a phone catalog (390×844) and a phone recipe page (390 wide,
 
 Photos are labelled placeholders (no real food photography yet).
 
-## Round 2 (after a direction is chosen)
-
-Desktop layouts, the recipe editor, the AI approval queue, empty/loading/error states, and the connector consent page, in the chosen direction.
-
 ## Round 2 — direction A with dark mode (D17)
 
 The owner chose **A · Kitchen Notebook** and asked for a dark mode viewers can choose (System default, Light, Dark). Round 2 adds, all in direction A:
