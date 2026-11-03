@@ -1,0 +1,7 @@
+# Copy to hosting/cloudflare/.dev.vars (next to wrangler.jsonc) for `npm run dev`. Never commit it.
+PUBLIC_BASE_URL=http://localhost:5173
+ADMIN_EMAILS=you@example.com
+# Generate with: openssl rand -base64 32
+BETTER_AUTH_SECRET=replace-with-at-least-32-random-characters
+GOOGLE_CLIENT_ID=replace-me.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=replace-me

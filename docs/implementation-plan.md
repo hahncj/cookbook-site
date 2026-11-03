@@ -29,16 +29,16 @@ Milestones are implemented one at a time. Each milestone starts only when the ow
 
 | Layer | Choice | Reason |
 | --- | --- | --- |
-| Language | TypeScript | One language for UI, server, and integration; catches errors early. |
-| Web framework | React Router v7 (framework mode) | Server-rendered pages (fast on phones; real HTML for Lose It! URL import); official adapters for Cloudflare Workers and Node. |
+| Language | TypeScript 6.0 | One language for UI, server, and integration; catches errors early. (6.0 rather than 7 because typescript-eslint does not support 7 yet.) |
+| Web framework | React Router v8 (framework mode) | Server-rendered pages (fast on phones; real HTML for Lose It! URL import); official adapters for Cloudflare Workers and Node. (Plan said v7; v8 is the current release of the same framework — updated in M0.) |
 | Database | Cloudflare D1 (SQLite) | Free, included with Workers, ample for a personal catalog; Time Travel point-in-time restore. |
 | Database toolkit | Drizzle ORM (D1 driver on Cloudflare; SQLite driver on the alternative host) | Same schema and migrations on both hosts. |
 | Search | SQLite FTS5 | Full-text search over title, ingredients, and notes with no extra service. |
 | Free duplicate matching | App-computed similarity (normalized title tokens and ingredient overlap) | SQLite lacks trigram matching; catalog size makes app-side scoring cheap. |
-| Media storage | Cloudflare R2 through the S3-compatible API | Free tier (10 GB), no egress fees; portable to any S3-compatible store. |
+| Media storage | Cloudflare R2 through a binding, behind the `MediaStore` interface; filesystem on the Node host | Free tier (10 GB), no egress fees. (Updated in M0: the binding needs no access keys; portability comes from the interface, and an S3 adapter can be added for any S3-compatible store.) |
 | Image handling | Browser resizes and re-encodes before upload; server validates type and size | Strips location metadata, converts HEIC, keeps uploads small, avoids server CPU. |
-| Authentication | Better Auth: Google sign-in + OAuth provider plugin for MCP | One portable library for owner sign-in and connector OAuth. Avoids Cloudflare-only auth libraries. |
-| MCP | Official MCP TypeScript SDK, stateless Streamable HTTP | Standard protocol; avoids Durable Objects-based helpers. |
+| Authentication | Better Auth: Google sign-in, `@better-auth/mcp` (OAuth 2.1 provider for MCP), and `@better-auth/cimd` | One portable library for owner sign-in and connector OAuth. Supports CIMD (current MCP client identification) with dynamic client registration as fallback. Avoids Cloudflare-only auth libraries. |
+| MCP | Official MCP TypeScript SDK v2 (`@modelcontextprotocol/server`), stateless | Standard protocol; serves both the 2025 and 2026-07-28 protocol versions; no Express dependency; avoids Durable Objects-based helpers. |
 | AI | Anthropic TypeScript SDK (`@anthropic-ai/sdk`), model `claude-opus-5-5` (configurable) | Vision, extraction, and recommendations; structured outputs for reliable fields; server-side web search and web fetch tools for discovery. |
 | Link import | schema.org Recipe JSON-LD parsing first; Claude only as fallback | Many imports cost nothing and contain only what the page states. |
 | Styling | Hand-written CSS with design tokens + React Aria components | Distinctive look with reliable accessibility. |
@@ -99,6 +99,30 @@ Each milestone ends with its completion criteria verified and reported against t
 
 **Done when:** both deployments are live and reach their databases; both AI apps connect and call the dummy tool; measured CPU times are recorded with a verdict on free-plan fit; the core-isolation check passes.
 **Needs from the owner:** Cloudflare account with the domain, Google OAuth client, Anthropic API key, ChatGPT/Claude.ai connector access. No purchases by the implementer.
+
+#### M0 status (2026-11-03, branch `feature/m0-foundation`)
+
+Verified locally:
+
+- [x] Typecheck, lint, and 17 automated tests pass (`npm run check`).
+- [x] Core-isolation lint rule rejects Cloudflare, framework, driver, and provider imports in `server/core`.
+- [x] Cloudflare build runs in the local Workers runtime (workerd) with local D1 and R2: `/health` ok, pages render, noindex header and meta present.
+- [x] Node build runs locally and in Docker (`hosting/node/Dockerfile`), applying migrations to a SQLite file on a volume.
+- [x] MCP OAuth flow end to end in tests: client registration, PKCE authorization, consent, token exchange, and an authenticated `ping` call; tokens for another audience are rejected.
+- [x] OAuth discovery metadata advertises CIMD, dynamic client registration, and PKCE S256; `/mcp` returns the RFC 9728 401 challenge.
+- [x] Admin-only sign-in gate unit-tested (non-admin Google accounts rejected; matching is case-insensitive).
+- [x] CPU proxy on Node (same V8 engine): median 1.5–3 ms per request; first request in a fresh process 7–14 ms. Services are built once per Worker isolate to keep per-request CPU low.
+
+Waiting on owner setup (steps in [deployment.md](deployment.md)):
+
+- [ ] Google OAuth client created; real Google sign-in tested.
+- [ ] D1 database and R2 bucket created; Worker deployed at cookbook.chrisandelissa.com; `/health` ok.
+- [ ] Claude.ai and ChatGPT connectors connected; `ping` called from each.
+- [ ] Free-plan CPU times measured on the deployed Worker; verdict recorded here.
+- [ ] D1 Time Travel restore confirmed.
+- [ ] Docker image deployed to a disposable alternative host (can also wait for M8).
+
+Notes: React Router's Workers rendering needed a custom `app/entry.server.tsx`. `requireMcpAuth` from `@better-auth/mcp` is not used because it fetches signing keys from the Worker's own URL, which a Worker cannot do; `server/mcp/endpoint.ts` verifies tokens with in-process keys instead.
 
 ### M1 — Design direction
 
