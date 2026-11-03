@@ -1,2 +1,3 @@
-// Single schema entry point for Drizzle (app tables are added in later milestones).
+// Single schema entry point for Drizzle.
 export * from "./auth-schema";
+export * from "./app-schema";
