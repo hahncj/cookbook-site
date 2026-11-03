@@ -12,13 +12,24 @@ export default function SignIn() {
   async function signIn() {
     setPending(true);
     setError(null);
-    // When this page is reached from a connector's OAuth request, the
-    // provider plugin carries the signed query along and resumes that flow
-    // after Google sign-in; otherwise the admin lands back on the home page.
-    const result = await authClient.signIn.social({ provider: "google", callbackURL: "/" });
-    if (result.error) {
+    const fail = (message: string) => {
       setPending(false);
-      setError(result.error.message ?? "Sign-in failed. Only cookbook admin accounts can sign in.");
+      setError(message);
+    };
+    // Never leave the button stuck: if the server does not answer, let the
+    // admin try again.
+    const timer = setTimeout(() => fail("Sign-in is taking too long. Please try again."), 15_000);
+    try {
+      // When this page is reached from a connector's OAuth request, the
+      // provider plugin carries the signed query along and resumes that flow
+      // after Google sign-in; otherwise the admin lands back on the home page.
+      const result = await authClient.signIn.social({ provider: "google", callbackURL: "/" });
+      if (result.error) fail(result.error.message ?? "Sign-in failed. Only cookbook admin accounts can sign in.");
+      // On success the client navigates to Google; the page unloads.
+    } catch {
+      fail("Could not reach the server. Check your connection and try again.");
+    } finally {
+      clearTimeout(timer);
     }
   }
 

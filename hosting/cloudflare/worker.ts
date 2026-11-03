@@ -4,7 +4,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { createRouterContext } from "../../app/context";
 import { createServices, handleRequest, type Services } from "../../server/app";
 import { fetchClientMetadataViaFetch } from "../../server/auth/cimd-fetch";
-import { loadConfig } from "../../server/config";
+import { loadConfig, type AppConfig } from "../../server/config";
 import * as schema from "../../server/db/schema";
 import { R2MediaStore } from "./r2-media";
 
@@ -13,27 +13,35 @@ const renderPage = createRequestHandler(
   import.meta.env.MODE,
 );
 
-// Services are built once per isolate and reused across requests (Workers keep
-// module state between requests). This keeps per-request CPU low on the free
-// plan (D16). Keyed by the env object so a new deployment rebuilds them.
-const servicesByEnv = new WeakMap<Env, Services>();
+// Only the parsed configuration (plain data) is cached per isolate.
+const configByEnv = new WeakMap<Env, AppConfig>();
 
-function getServices(env: Env): Services {
-  let services = servicesByEnv.get(env);
-  if (!services) {
-    services = createServices({
-      config: loadConfig(env as unknown as Record<string, unknown>, "cloudflare"),
-      db: drizzle(env.DB, { schema }),
-      media: env.MEDIA ? new R2MediaStore(env.MEDIA) : null,
-      fetchClientMetadata: fetchClientMetadataViaFetch,
-    });
-    servicesByEnv.set(env, services);
+function getConfig(env: Env): AppConfig {
+  let config = configByEnv.get(env);
+  if (!config) {
+    config = loadConfig(env as unknown as Record<string, unknown>, "cloudflare");
+    configByEnv.set(env, config);
   }
-  return services;
+  return config;
+}
+
+// Services (including the Better Auth instance) are built per request on
+// purpose. Workers cannot resolve a promise created by one request from inside
+// another; reusing a Better Auth instance across requests let its lazy
+// initialization leak between requests, and sign-in intermittently hung on a
+// fresh production isolate. Per-request construction costs about 1–2 ms CPU,
+// well inside the free plan's limit (D16).
+function buildServices(env: Env): Services {
+  return createServices({
+    config: getConfig(env),
+    db: drizzle(env.DB, { schema }),
+    media: env.MEDIA ? new R2MediaStore(env.MEDIA) : null,
+    fetchClientMetadata: fetchClientMetadataViaFetch,
+  });
 }
 
 export default {
   async fetch(request, env) {
-    return handleRequest(request, getServices(env), (req, svc) => renderPage(req, createRouterContext(svc)));
+    return handleRequest(request, buildServices(env), (req, svc) => renderPage(req, createRouterContext(svc)));
   },
 } satisfies ExportedHandler<Env>;
