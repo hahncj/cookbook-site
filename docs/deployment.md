@@ -57,25 +57,32 @@ The custom domain route in `wrangler.jsonc` creates the DNS record and certifica
 
 ### GitHub builds (Workers Builds)
 
-The Worker is connected to this repository in **Workers & Pages → cookbook-site → Settings → Build**:
+The Worker is connected to this repository in **Workers & Pages → cookbook-site → Settings → Build**, which has two tabs:
 
-| Setting | Value |
-| --- | --- |
-| Production branch | `main` |
-| Non-production branch builds | Enabled |
-| Non-production branch deploy command | `npm run build` |
+| Tab | Field | Value |
+| --- | --- | --- |
+| Production | Production branch | `main` |
+| Production | Build command | `npm run build` |
+| Production | Deploy command | `npm run deploy:ci` |
+| Previews Base | Builds for Preview branches | On |
+| Previews Base | Build command | `npm run build` |
+| Previews Base | Preview command | `echo "Build-only check: previews are not deployed"` |
 
-Pull request branches are **build-only checks**: they confirm the app builds and deploy nothing. Preview deploys are off on purpose. Wrangler refuses to upload a preview unless `wrangler.jsonc` has a `previews` block naming preview-only resources (so previews never touch the production `cookbook` database or `cookbook-media` bucket). Google sign-in also cannot work on preview URLs, because each one is different and Google OAuth does not accept wildcard redirect URIs. If live previews become useful, add a `previews` block with a separate D1 database and R2 bucket, then set the non-production deploy command back to `npx wrangler versions upload`.
+The build token selected under **API token** needs **D1: Edit** permission (in addition to Workers permissions) so production deploys can apply migrations.
 
-### Database migrations before merging
+**Production (merges to `main`):** `npm run deploy:ci` applies any new database migrations to the production `cookbook` database, then deploys the Worker. If a migration fails, the deploy stops and the previous version keeps running.
 
-Merging to `main` deploys the Worker automatically, but **does not change the database**. When a pull request adds files under `db/migrations/`, apply them to production **before merging**:
+**Pull request branches:** build-only checks. They confirm the app builds and deploy nothing; Preview URLs stay disabled. The default preview command (`npx wrangler preview`) would fail, because Wrangler refuses to upload a preview unless `wrangler.jsonc` has a `previews` block naming preview-only resources, so previews never touch the production database or `cookbook-media` bucket. Google sign-in also cannot work on preview URLs, because each one is different and Google OAuth does not accept wildcard redirect URIs. If live previews become useful, add a `previews` block with a separate D1 database and R2 bucket and restore the preview command.
+
+### Database migrations
+
+The code and the database deploy separately: merging updates the code, and **migrations** (the SQL files in `db/migrations/`) add the tables and indexes new code needs. `npm run deploy:ci` applies them automatically before each production deploy. Migrations only add tables, columns and indexes, so the version already running keeps working on the newer schema while a deploy is in progress.
+
+To apply them by hand (for example after deploying from your machine with `npm run deploy`):
 
 ```sh
 npm run db:migrate:remote
 ```
-
-Migrations only add tables, columns and indexes, so the version already running keeps working on the newer schema. Applying them after the merge instead leaves the new code briefly running against missing tables (pages that need them return errors until the migration runs).
 
 Note: `wrangler d1 export` cannot export databases that contain virtual tables, and the catalog's full-text index (`recipes_fts`) is one. Use D1 Time Travel for point-in-time recovery; the app's own backup download (M3) covers full exports.
 
