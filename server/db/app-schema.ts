@@ -20,6 +20,8 @@ export const recipes = sqliteTable(
     cookTime: text("cook_time"),
     ingredients: text("ingredients", { mode: "json" }).$type<{ quantity: string; item: string }[]>().notNull(),
     steps: text("steps", { mode: "json" }).$type<string[]>().notNull(),
+    /** Ordered photos shown with the entry (part of each revision's snapshot). */
+    photos: text("photos", { mode: "json" }).$type<{ id: string; caption: string }[]>().notNull().default(sql`'[]'`),
     searchIngredients: text("search_ingredients").notNull().default(""),
     sourceUrl: text("source_url"),
     sourceName: text("source_name"),
@@ -72,4 +74,56 @@ export const recipeCollections = sqliteTable(
     collectionId: text("collection_id").notNull().references(() => collections.id, { onDelete: "cascade" }),
   },
   (t) => [primaryKey({ columns: [t.recipeId, t.collectionId] }), index("recipe_collections_collection_idx").on(t.collectionId)],
+);
+
+/**
+ * Stored photo files (bytes live in the MediaStore under `photos/<id>.<ext>`
+ * and `photos/<id>-thumb.<ext>`). Never deleted: a revision may still show it.
+ * `recipeId` is set when a recipe that uses the photo is first saved; until
+ * then only admins can view it.
+ */
+export const photos = sqliteTable(
+  "photos",
+  {
+    id: text("id").primaryKey(),
+    recipeId: text("recipe_id").references(() => recipes.id),
+    ext: text("ext", { enum: ["jpg", "webp", "png"] }).notNull(),
+    contentType: text("content_type").notNull(),
+    width: integer("width").notNull(),
+    height: integer("height").notNull(),
+    bytes: integer("bytes").notNull(),
+    thumbBytes: integer("thumb_bytes").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    createdBy: text("created_by"),
+  },
+  (t) => [index("photos_recipe_idx").on(t.recipeId)],
+);
+
+/** Immutable history: one full snapshot per saved version (AC-050). */
+export const recipeRevisions = sqliteTable(
+  "recipe_revisions",
+  {
+    recipeId: text("recipe_id").notNull().references(() => recipes.id),
+    revision: integer("revision").notNull(),
+    snapshot: text("snapshot", { mode: "json" }).notNull(),
+    changeNote: text("change_note"),
+    origin: text("origin", { enum: ["create", "edit", "restore", "ai", "backfill"] }).notNull(),
+    restoredFrom: integer("restored_from"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    createdBy: text("created_by"),
+  },
+  (t) => [primaryKey({ columns: [t.recipeId, t.revision] })],
+);
+
+/** Dated "notes & experiments" log (AC-051). Adding one does not create a version. */
+export const recipeNotes = sqliteTable(
+  "recipe_notes",
+  {
+    id: text("id").primaryKey(),
+    recipeId: text("recipe_id").notNull().references(() => recipes.id),
+    body: text("body").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    createdBy: text("created_by"),
+  },
+  (t) => [index("recipe_notes_recipe_idx").on(t.recipeId, t.createdAt)],
 );

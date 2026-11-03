@@ -10,6 +10,12 @@ export interface Ingredient {
   item: string;
 }
 
+/** A photo shown with an entry, in display order. */
+export interface PhotoRef {
+  id: string;
+  caption: string;
+}
+
 export interface EntryInput {
   kind: EntryKind;
   title: string;
@@ -24,6 +30,7 @@ export interface EntryInput {
   sourceName: string | null;
   tags: string[];
   collectionIds: string[];
+  photos: PhotoRef[];
 }
 
 export interface NamedRef {
@@ -51,6 +58,8 @@ export interface EntrySummary {
   cookTime: string | null;
   /** First few ingredient names, for entries shown without a photo. */
   ingredientPreview: string[];
+  /** The first photo, shown as the catalog thumbnail. */
+  coverPhoto: PhotoRef | null;
   tags: string[];
   updatedAt: Date;
   deletedAt: Date | null;
@@ -65,7 +74,11 @@ export const LIMITS = {
   steps: 200,
   tags: 30,
   collections: 30,
+  photos: 20,
+  caption: 200,
 } as const;
+
+const photoId = z.string().regex(/^[0-9a-f-]{36}$/i, "Invalid photo");
 
 const optionalText = (max: number) =>
   z
@@ -118,6 +131,16 @@ const entrySchema = z.object({
     .array(z.string().max(64))
     .max(LIMITS.collections)
     .transform((ids) => [...new Set(ids.filter((id) => id.length > 0))]),
+  photos: z
+    .array(z.object({ id: photoId, caption: z.string().max(LIMITS.caption, `Keep captions under ${LIMITS.caption} characters`) }))
+    .max(LIMITS.photos, `At most ${LIMITS.photos} photos`)
+    .optional()
+    .transform((list) => {
+      const seen = new Set<string>();
+      return (list ?? [])
+        .map((photo) => ({ id: photo.id.toLowerCase(), caption: photo.caption.trim() }))
+        .filter((photo) => (seen.has(photo.id) ? false : (seen.add(photo.id), true)));
+    }),
 });
 
 export type FieldErrors = Partial<Record<keyof EntryInput | "form", string>>;

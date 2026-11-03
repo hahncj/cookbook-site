@@ -5,11 +5,12 @@ import { createServices, handleRequest, type PageRenderer, type Services } from 
 import { fetchClientMetadataViaFetch } from "../../server/auth/cimd-fetch";
 import { loadConfig } from "../../server/config";
 import * as schema from "../../server/db/schema";
+import type { MediaStore } from "../../server/adapters/media";
 
 export const BASE_URL = "http://localhost:5173";
 export const ADMIN_EMAIL = "admin@example.com";
 
-export function createTestServices(): Services {
+export function createTestServices(options: { media?: MediaStore | null } = {}): Services {
   const sqlite = new Database(":memory:");
   const db = drizzle(sqlite, { schema });
   migrate(db, { migrationsFolder: "db/migrations" });
@@ -23,7 +24,7 @@ export function createTestServices(): Services {
     },
     "node",
   );
-  return createServices({ config, db, media: null, fetchClientMetadata: fetchClientMetadataViaFetch });
+  return createServices({ config, db, media: options.media ?? null, fetchClientMetadata: fetchClientMetadataViaFetch });
 }
 
 /**

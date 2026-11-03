@@ -8,6 +8,8 @@ import type { ClientMetadataResourceFetch } from "@better-auth/oauth-provider";
 import { createMcpEndpoint } from "./mcp/endpoint";
 import { createCatalogRepository } from "./adapters/catalog-repo";
 import { createCatalog, type Catalog } from "./core/catalog";
+import { isAdminEmail } from "./core/admin";
+import { servePhoto } from "./photos";
 
 /** Everything a request handler may use. Built per request by the host adapter. */
 export interface Services {
@@ -77,6 +79,15 @@ export async function handleRequest(request: Request, services: Services, render
     response = await services.auth.handler(request);
   } else if (pathname === MCP_PATH) {
     response = await createMcpEndpoint(services.auth, services.config)(request);
+  } else if (pathname.startsWith("/media/") && (request.method === "GET" || request.method === "HEAD")) {
+    response = await servePhoto(request, {
+      db: services.db,
+      media: services.media,
+      isAdmin: async () => {
+        const session = await services.auth.api.getSession({ headers: request.headers });
+        return isAdminEmail(session?.user.email, services.config.adminEmails);
+      },
+    });
   } else {
     response = await renderPage(request, services);
   }

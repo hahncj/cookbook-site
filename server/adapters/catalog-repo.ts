@@ -1,8 +1,10 @@
 import { and, asc, count, desc, eq, exists, inArray, isNotNull, isNull, sql, type SQL } from "drizzle-orm";
-import type { Actor, CatalogRepository, CountedRef, ListQuery } from "../core/catalog";
-import type { Entry, EntryInput, EntryOrigin, EntrySummary, NamedRef } from "../core/recipes";
+import type { Actor, CatalogRepository, CountedRef, ListQuery, SaveMeta } from "../core/catalog";
+import type { Revision, RevisionInfo, RevisionSnapshot } from "../core/history";
+import { snapshotOf } from "../core/history";
+import type { Entry, EntryInput, EntryOrigin, EntrySummary, NamedRef, PhotoRef } from "../core/recipes";
 import { ingredientSearchText } from "../core/recipes";
-import { collections, recipeCollections, recipes, recipeTags, tags } from "../db/app-schema";
+import { collections, photos, recipeCollections, recipeNotes, recipeRevisions, recipes, recipeTags, tags } from "../db/app-schema";
 import { atomic, changesOf } from "./atomic";
 import type { Database } from "./db";
 
@@ -22,6 +24,7 @@ function toSummary(row: RecipeRow, tagNames: string[]): EntrySummary {
       .map((ingredient) => ingredient.item)
       .filter((item) => item.length > 0)
       .slice(0, PREVIEW_INGREDIENTS),
+    coverPhoto: row.photos[0] ?? null,
     tags: tagNames,
     updatedAt: row.updatedAt,
     deletedAt: row.deletedAt,
@@ -39,6 +42,7 @@ function recipeValues(input: EntryInput) {
     cookTime: input.cookTime,
     ingredients: input.ingredients,
     steps: input.steps,
+    photos: input.photos,
     searchIngredients: ingredientSearchText(input.ingredients),
     sourceUrl: input.sourceUrl,
     sourceName: input.sourceName,
@@ -67,12 +71,20 @@ export function createCatalogRepository(db: Database, newId: () => string): Cata
     return { ids, missing };
   }
 
-  /** Only collection ids that exist (stale form input is ignored rather than failing). */
-  async function existingCollectionIds(ids: string[]) {
+  /** Only collections that exist (stale form input or old versions are ignored rather than failing). */
+  async function existingCollections(ids: string[]): Promise<NamedRef[]> {
     if (ids.length === 0) return [];
-    const rows = await db.select({ id: collections.id }).from(collections).where(inArray(collections.id, ids));
+    const rows = await db.select({ id: collections.id, name: collections.name }).from(collections).where(inArray(collections.id, ids));
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    return ids.map((id) => byId.get(id)).filter((row): row is NamedRef => Boolean(row));
+  }
+
+  /** Only photos that were uploaded (never trust ids from a form). */
+  async function existingPhotos(list: PhotoRef[]): Promise<PhotoRef[]> {
+    if (list.length === 0) return [];
+    const rows = await db.select({ id: photos.id }).from(photos).where(inArray(photos.id, list.map((p) => p.id)));
     const valid = new Set(rows.map((row) => row.id));
-    return ids.filter((id) => valid.has(id));
+    return list.filter((photo) => valid.has(photo.id));
   }
 
   async function tagNamesFor(recipeIds: string[]) {
@@ -87,6 +99,23 @@ export function createCatalogRepository(db: Database, newId: () => string): Cata
     for (const row of rows) map.set(row.recipeId, [...(map.get(row.recipeId) ?? []), row.name]);
     return map;
   }
+
+  /** Normalizes input against what exists, and builds the version snapshot. */
+  async function prepare(input: EntryInput, now: Date) {
+    const [{ ids: tagIds, missing }, collectionRefs, photoRefs] = await Promise.all([
+      resolveTags(input.tags, now),
+      existingCollections(input.collectionIds),
+      existingPhotos(input.photos),
+    ]);
+    const clean: EntryInput = { ...input, collectionIds: collectionRefs.map((c) => c.id), photos: photoRefs };
+    return { clean, tagIds, missingTags: missing, snapshot: snapshotOf(clean, collectionRefs) };
+  }
+
+  const attachPhotos = (recipeId: string, list: PhotoRef[]) => () =>
+    db
+      .update(photos)
+      .set({ recipeId })
+      .where(and(inArray(photos.id, list.map((p) => p.id)), isNull(photos.recipeId)));
 
   return {
     async list(query: ListQuery) {
@@ -142,6 +171,7 @@ export function createCatalogRepository(db: Database, newId: () => string): Cata
         cookTime: row.cookTime,
         ingredients: row.ingredients,
         steps: row.steps,
+        photos: row.photos,
         sourceUrl: row.sourceUrl,
         sourceName: row.sourceName,
         origin: row.origin,
@@ -155,14 +185,13 @@ export function createCatalogRepository(db: Database, newId: () => string): Cata
       return entry;
     },
 
-    async create(input, meta: { id: string; origin: EntryOrigin; now: Date; actor: Actor }) {
-      const { ids: tagIds, missing } = await resolveTags(input.tags, meta.now);
-      const collectionIds = await existingCollectionIds(input.collectionIds);
+    async create(input, meta: SaveMeta & { id: string; origin: EntryOrigin }) {
+      const { clean, tagIds, missingTags, snapshot } = await prepare(input, meta.now);
       await atomic(db, [
         () =>
           db.insert(recipes).values({
             id: meta.id,
-            ...recipeValues(input),
+            ...recipeValues(clean),
             origin: meta.origin,
             revision: 1,
             createdAt: meta.now,
@@ -170,27 +199,38 @@ export function createCatalogRepository(db: Database, newId: () => string): Cata
             createdBy: meta.actor.userId,
             updatedBy: meta.actor.userId,
           }),
-        ...missing.map((tag) => () => db.insert(tags).values(tag).onConflictDoNothing()),
+        () =>
+          db.insert(recipeRevisions).values({
+            recipeId: meta.id,
+            revision: 1,
+            snapshot,
+            changeNote: meta.changeNote,
+            origin: meta.revisionOrigin,
+            createdAt: meta.now,
+            createdBy: meta.actor.userId,
+          }),
+        ...missingTags.map((tag) => () => db.insert(tags).values(tag).onConflictDoNothing()),
         ...tagIds.map((tagId) => () => db.insert(recipeTags).values({ recipeId: meta.id, tagId }).onConflictDoNothing()),
-        ...collectionIds.map(
+        ...clean.collectionIds.map(
           (collectionId) => () => db.insert(recipeCollections).values({ recipeId: meta.id, collectionId }).onConflictDoNothing(),
         ),
+        ...(clean.photos.length ? [attachPhotos(meta.id, clean.photos)] : []),
       ]);
     },
 
     async update(id, expectedRevision, input, meta) {
-      const { ids: tagIds, missing } = await resolveTags(input.tags, meta.now);
-      const collectionIds = await existingCollectionIds(input.collectionIds);
+      const { clean, tagIds, missingTags, snapshot } = await prepare(input, meta.now);
       const nextRevision = expectedRevision + 1;
-      // Link changes only apply if THIS update won (revision, time and author all match).
-      const applied = () => exists(db.select({ one: sql`1` }).from(recipes).where(wonUpdate));
-      // Insert-from-select rows, produced only when THIS update won (see `applied`).
+      // Everything after the first statement applies only if THIS update won
+      // (revision, time and author all match), so a losing concurrent update
+      // cannot change links or add a version.
       const wonUpdate = and(
         eq(recipes.id, id),
         eq(recipes.revision, nextRevision),
         eq(recipes.updatedAt, meta.now),
         eq(recipes.updatedBy, meta.actor.userId),
       );
+      const applied = () => exists(db.select({ one: sql`1` }).from(recipes).where(wonUpdate));
       const tagLink = (tagId: string) =>
         db
           .select({ recipeId: sql<string>`${id}`.as("recipe_id"), tagId: sql<string>`${tagId}`.as("tag_id") })
@@ -201,20 +241,35 @@ export function createCatalogRepository(db: Database, newId: () => string): Cata
           .select({ recipeId: sql<string>`${id}`.as("recipe_id"), collectionId: sql<string>`${collectionId}`.as("collection_id") })
           .from(recipes)
           .where(wonUpdate);
+      const revisionRow = db
+        .select({
+          recipeId: sql<string>`${id}`.as("recipe_id"),
+          revision: sql<number>`${nextRevision}`.as("revision"),
+          snapshot: sql<string>`${JSON.stringify(snapshot)}`.as("snapshot"),
+          changeNote: sql<string | null>`${meta.changeNote}`.as("change_note"),
+          origin: sql<string>`${meta.revisionOrigin}`.as("origin"),
+          restoredFrom: sql<number | null>`${meta.restoredFrom ?? null}`.as("restored_from"),
+          createdAt: sql<number>`${meta.now.getTime()}`.as("created_at"),
+          createdBy: sql<string>`${meta.actor.userId}`.as("created_by"),
+        })
+        .from(recipes)
+        .where(wonUpdate);
 
       const results = await atomic(db, [
         () =>
           db
             .update(recipes)
-            .set({ ...recipeValues(input), revision: nextRevision, updatedAt: meta.now, updatedBy: meta.actor.userId })
+            .set({ ...recipeValues(clean), revision: nextRevision, updatedAt: meta.now, updatedBy: meta.actor.userId })
             .where(and(eq(recipes.id, id), eq(recipes.revision, expectedRevision), isNull(recipes.deletedAt))),
-        ...missing.map((tag) => () => db.insert(tags).values(tag).onConflictDoNothing()),
+        () => db.insert(recipeRevisions).select(revisionRow as never),
+        ...missingTags.map((tag) => () => db.insert(tags).values(tag).onConflictDoNothing()),
         () => db.delete(recipeTags).where(and(eq(recipeTags.recipeId, id), applied())),
         ...tagIds.map((tagId) => () => db.insert(recipeTags).select(tagLink(tagId)).onConflictDoNothing()),
         () => db.delete(recipeCollections).where(and(eq(recipeCollections.recipeId, id), applied())),
-        ...collectionIds.map(
+        ...clean.collectionIds.map(
           (collectionId) => () => db.insert(recipeCollections).select(collectionLink(collectionId)).onConflictDoNothing(),
         ),
+        ...(clean.photos.length ? [attachPhotos(id, clean.photos)] : []),
       ]);
       return changesOf(results[0]) > 0;
     },
@@ -227,7 +282,7 @@ export function createCatalogRepository(db: Database, newId: () => string): Cata
             .where(and(eq(recipes.id, id), isNull(recipes.deletedAt)))
         : db
             .update(recipes)
-            .set({ deletedAt: null, deletedBy: null, updatedAt: meta.now, updatedBy: meta.actor.userId })
+            .set({ deletedAt: null, deletedBy: null })
             .where(and(eq(recipes.id, id), isNotNull(recipes.deletedAt)));
       const [result] = await atomic(db, [() => statement]);
       return changesOf(result) > 0;
@@ -240,25 +295,23 @@ export function createCatalogRepository(db: Database, newId: () => string): Cata
     },
 
     async listTags(): Promise<CountedRef[]> {
-      const rows = await db
+      return db
         .select({ id: tags.id, name: tags.name, count: count(recipes.id) })
         .from(tags)
         .innerJoin(recipeTags, eq(recipeTags.tagId, tags.id))
         .innerJoin(recipes, and(eq(recipes.id, recipeTags.recipeId), isNull(recipes.deletedAt)))
         .groupBy(tags.id, tags.name)
         .orderBy(asc(sql`lower(${tags.name})`));
-      return rows;
     },
 
     async listCollections(): Promise<CountedRef[]> {
-      const rows = await db
+      return db
         .select({ id: collections.id, name: collections.name, count: count(recipes.id) })
         .from(collections)
         .leftJoin(recipeCollections, eq(recipeCollections.collectionId, collections.id))
         .leftJoin(recipes, and(eq(recipes.id, recipeCollections.recipeId), isNull(recipes.deletedAt)))
         .groupBy(collections.id, collections.name)
         .orderBy(asc(sql`lower(${collections.name})`));
-      return rows;
     },
 
     async createCollection(name, meta): Promise<NamedRef> {
@@ -269,6 +322,54 @@ export function createCatalogRepository(db: Database, newId: () => string): Cata
         .where(sql`${collections.name} = ${name} collate nocase`)
         .limit(1);
       return row!;
+    },
+
+    async listRevisions(id): Promise<RevisionInfo[]> {
+      return db
+        .select({
+          revision: recipeRevisions.revision,
+          origin: recipeRevisions.origin,
+          changeNote: recipeRevisions.changeNote,
+          restoredFrom: recipeRevisions.restoredFrom,
+          createdAt: recipeRevisions.createdAt,
+          createdBy: recipeRevisions.createdBy,
+        })
+        .from(recipeRevisions)
+        .where(eq(recipeRevisions.recipeId, id))
+        .orderBy(desc(recipeRevisions.revision));
+    },
+
+    async getRevision(id, revision): Promise<Revision | null> {
+      const [row] = await db
+        .select()
+        .from(recipeRevisions)
+        .where(and(eq(recipeRevisions.recipeId, id), eq(recipeRevisions.revision, revision)))
+        .limit(1);
+      if (!row) return null;
+      const snapshot = (typeof row.snapshot === "string" ? JSON.parse(row.snapshot) : row.snapshot) as RevisionSnapshot;
+      return {
+        revision: row.revision,
+        origin: row.origin,
+        changeNote: row.changeNote,
+        restoredFrom: row.restoredFrom,
+        createdAt: row.createdAt,
+        createdBy: row.createdBy,
+        snapshot: { ...snapshot, photos: snapshot.photos ?? [] },
+      };
+    },
+
+    async addNote(recipeId, body, meta: { id: string; now: Date; actor: Actor }) {
+      await atomic(db, [
+        () => db.insert(recipeNotes).values({ id: meta.id, recipeId, body, createdAt: meta.now, createdBy: meta.actor.userId }),
+      ]);
+    },
+
+    async listNotes(recipeId) {
+      return db
+        .select({ id: recipeNotes.id, body: recipeNotes.body, createdAt: recipeNotes.createdAt })
+        .from(recipeNotes)
+        .where(eq(recipeNotes.recipeId, recipeId))
+        .orderBy(desc(recipeNotes.createdAt));
     },
   };
 }
