@@ -160,6 +160,31 @@ Sources are committed in `design/m1/` and viewable on the private design canvas.
 
 **Done when:** AC-001, 003, 005 (excluding photos), 009, 022, 023, 026, 027, 037, 062–065, 068, 069, 071, 072 pass.
 
+#### M2 status (2026-11-03, branch `feature/m2-core-catalog`)
+
+Verified by automated tests (`npm run check`: 64 unit/integration tests; `npm run test:e2e`: 37 browser checks in Chromium and WebKit at phone 390 px, tablet 768 px and desktop 1280 px):
+
+| Check | How it was verified |
+| --- | --- |
+| AC-001, AC-065, AC-027 | Signed-out browser browses, searches and reads; no Edit/Add controls; admin sees them after sign-in |
+| AC-003, AC-026 | No horizontal page scroll on catalog, search, recipe (including a very long title), idea, sign-in, editor, deleted-recipes pages at all three widths |
+| AC-005 (no photos) | Recipes, title-only ideas and source links saved through the editor (photos and screenshots are M3) |
+| AC-009 | Full-text search over title, description, notes and ingredients (prefix matching, injection-safe); filters by tag, collection and recipe/idea |
+| AC-022, AC-068, AC-069 | A saved recipe is immediately readable from a separate signed-out browser; no draft state exists |
+| AC-023 | The catalog is the public home page with search in the header; Add appears for admins |
+| AC-037 | axe-core finds no serious or critical violations (WCAG 2.1 AA, including contrast) on public and admin pages; search reachable by keyboard; every field labelled |
+| AC-062, AC-063 | Google sign-in verified in production (M0); non-admin sessions get 403 on every admin write |
+| AC-064 | Signed-out writes return 401 and non-admin writes 403 for create, edit, delete and restore; nothing changes |
+| AC-071, AC-072 | System follows the device; Light/Dark choice saved in a cookie and rendered by the server (the raw HTML carries the theme, so no flash); axe passes in dark |
+| AC-031 (early) | A stale edit returns a conflict and keeps the typed values; the stored recipe and its tags are unchanged |
+| AC-048 (early) | Validation errors keep everything typed |
+
+Also verified against the Cloudflare build in local workerd with D1: create, full-text search, update (D1 batch), stale-update conflict, signed-out 401, delete (404 publicly) and restore.
+
+Production checks after merge: apply migrations first (`npm run db:migrate:remote`, see deployment.md), then confirm pages, search and editing on cookbook.chrisandelissa.com, and watch CPU (D16).
+
+Deferred by plan: photos (M3), version history (M3), markers and serving scaling (M6). Recipes without photos show an ingredient snippet, as in the approved mockups.
+
 ### M3 — Photos, history, backup
 
 - Camera capture and upload with browser-side resize/re-encode; R2 storage via S3 API; multiple ordered photos with captions.

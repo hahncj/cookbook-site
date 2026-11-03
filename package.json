@@ -20,7 +20,8 @@
     "auth:schema": "auth generate --config scripts/auth-cli-config.ts --output server/db/auth-schema.ts --yes",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply cookbook --local --persist-to .wrangler/state -c hosting/cloudflare/wrangler.jsonc",
-    "db:migrate:remote": "wrangler d1 migrations apply cookbook --remote -c hosting/cloudflare/wrangler.jsonc"
+    "db:migrate:remote": "wrangler d1 migrations apply cookbook --remote -c hosting/cloudflare/wrangler.jsonc",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@better-auth/cimd": "1.7.15",
@@ -43,6 +44,7 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@cloudflare/vite-plugin": "1.67.0",
     "@playwright/test": "1.64.1",
     "@react-router/dev": "8.5.1",
