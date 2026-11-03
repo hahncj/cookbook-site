@@ -1,18 +1,61 @@
-import { Links, Meta, Outlet, Scripts, ScrollRestoration, isRouteErrorResponse } from "react-router";
+import "@fontsource-variable/newsreader/opsz.css";
+import "@fontsource-variable/newsreader/opsz-italic.css";
+import "@fontsource-variable/public-sans/index.css";
+import "./styles/app.css";
+
+import { useState } from "react";
+import {
+  Form,
+  Link,
+  Links,
+  Meta,
+  Outlet,
+  Scripts,
+  ScrollRestoration,
+  isRouteErrorResponse,
+  useLocation,
+  useRouteLoaderData,
+  useSearchParams,
+} from "react-router";
+import { authClient } from "./auth-client";
+import { PlusIcon, SearchIcon } from "./components/icons";
+import { servicesContext } from "./context";
+import { getViewer, type Viewer } from "./session.server";
+import { THEMES, readTheme, type ThemePreference } from "./theme";
 import type { Route } from "./+types/root";
 
+export async function loader({ request, context }: Route.LoaderArgs) {
+  const services = context.get(servicesContext);
+  return {
+    viewer: await getViewer(request, services),
+    theme: readTheme(request.headers.get("Cookie")),
+  };
+}
+
+export interface RootData {
+  viewer: Viewer | null;
+  theme: ThemePreference;
+}
+
+export function useRootData(): RootData {
+  return (useRouteLoaderData("root") as RootData | undefined) ?? { viewer: null, theme: "system" };
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
+  const data = useRouteLoaderData("root") as RootData | undefined;
+  const theme = data?.theme ?? "system";
   return (
-    <html lang="en">
+    <html lang="en" data-theme={theme}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         {/* D10: keep the site out of search engines. */}
         <meta name="robots" content="noindex, nofollow" />
+        <meta name="color-scheme" content={theme === "system" ? "light dark" : theme} />
         <Meta />
         <Links />
       </head>
-      <body style={{ fontFamily: "system-ui, sans-serif", margin: "0 auto", maxWidth: 640, padding: "2rem 1rem" }}>
+      <body>
         {children}
         <ScrollRestoration />
         <Scripts />
@@ -21,18 +64,144 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
+function SiteHeader() {
+  const { viewer } = useRootData();
+  const [params] = useSearchParams();
+  const location = useLocation();
+  const query = location.pathname === "/" ? (params.get("q") ?? "") : "";
+  return (
+    <header className="site-header">
+      <div className="container site-header-inner">
+        <Link to="/" className="brand">
+          Cookbook
+        </Link>
+        <Form method="get" action="/" role="search" className="search header-search">
+          <label htmlFor="site-search" className="visually-hidden">
+            Search recipes
+          </label>
+          <SearchIcon />
+          <input id="site-search" type="search" name="q" defaultValue={query} key={query} placeholder="Search titles, ingredients, notes" />
+        </Form>
+        {viewer?.isAdmin && (
+          <div className="header-actions">
+            <Link to="/recipes/new" className="btn btn-primary">
+              <PlusIcon />
+              Add
+            </Link>
+          </div>
+        )}
+      </div>
+    </header>
+  );
+}
+
+function AppearanceControl() {
+  const { theme } = useRootData();
+  const location = useLocation();
+  return (
+    <Form method="post" action="/theme" className="appearance" preventScrollReset>
+      <input type="hidden" name="returnTo" value={location.pathname + location.search} />
+      <fieldset style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <legend className="visually-hidden">Appearance</legend>
+        <span aria-hidden="true" className="muted">
+          Appearance
+        </span>
+        <div className="segmented">
+          {THEMES.map((option) => (
+            <button key={option.value} type="submit" name="theme" value={option.value} aria-pressed={theme === option.value}>
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </fieldset>
+    </Form>
+  );
+}
+
+function SignOutButton() {
+  const [pending, setPending] = useState(false);
+  return (
+    <button
+      type="button"
+      className="btn"
+      disabled={pending}
+      onClick={async () => {
+        setPending(true);
+        await authClient.signOut();
+        window.location.href = "/";
+      }}
+    >
+      Sign out
+    </button>
+  );
+}
+
+function SiteFooter() {
+  const { viewer } = useRootData();
+  return (
+    <footer className="site-footer">
+      <div className="container site-footer-inner">
+        <AppearanceControl />
+        <nav aria-label="Account" className="footer-links">
+          {viewer?.isAdmin ? (
+            <>
+              <Link to="/deleted">Deleted recipes</Link>
+              <span className="muted">{viewer.email}</span>
+              <SignOutButton />
+            </>
+          ) : viewer ? (
+            <>
+              <span className="muted">Signed in as {viewer.email} (not an admin)</span>
+              <SignOutButton />
+            </>
+          ) : (
+            <Link to="/sign-in">Admin sign-in</Link>
+          )}
+        </nav>
+      </div>
+    </footer>
+  );
+}
+
 export default function App() {
-  return <Outlet />;
+  return (
+    <>
+      <a href="#main" className="skip-link">
+        Skip to content
+      </a>
+      <SiteHeader />
+      <main id="main" className="container site-main">
+        <Outlet />
+      </main>
+      <SiteFooter />
+    </>
+  );
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  const message = isRouteErrorResponse(error) ? `${error.status} ${error.statusText}` : "Something went wrong";
+  let title = "Something went wrong";
+  let detail = "Please try again in a moment.";
+  if (isRouteErrorResponse(error)) {
+    if (error.status === 404) {
+      title = "Not found";
+      detail = "That recipe isn't here. It may have been deleted.";
+    } else {
+      title = error.status === 401 || error.status === 403 ? "Not allowed" : `Error ${error.status}`;
+      detail = typeof error.data === "string" && error.data ? error.data : detail;
+    }
+  }
   return (
-    <main>
-      <h1>{message}</h1>
-      <p>
-        <a href="/">Back to the cookbook</a>
-      </p>
-    </main>
+    <>
+      <SiteHeader />
+      <main id="main" className="container site-main">
+        <div className="empty">
+          <h1>{title}</h1>
+          <p>{detail}</p>
+          <p>
+            <Link to="/">Back to the cookbook</Link>
+          </p>
+        </div>
+      </main>
+    </>
   );
 }
