@@ -24,6 +24,7 @@ Milestones are implemented one at a time. Each milestone starts only when the ow
 | D14 | AI ingredient identification works on **new and existing** recipes. Suggestions never overwrite existing ingredients without review. |
 | D15 | Database is **Cloudflare D1** (owner choice), accessed only through an adapter. D1 is a documented Cloudflare dependency. |
 | D16 | Use the **Cloudflare Workers free plan**. If measured CPU time exceeds free-plan limits, moving to the paid plan is the owner's decision. **2026-11-03:** measured production CPU exceeds the 10 ms limit (medians 11–34 ms; see M0 status) with no failures observed; the owner chose to **stay on the free plan and watch for errors** (Cloudflare error 1102 / `exceededCpu`). Revisit if failures appear. |
+| D17 | **Visual direction A · Kitchen Notebook** (approved 2026-11-03) with a **viewer-selectable theme**: System default (follows the device), Light, or Dark. Proposed: the choice is remembered on the device for any visitor. Mockups and palettes: [design/m1/](../design/m1/README.md). |
 
 ## Technology stack
 
@@ -140,14 +141,24 @@ Notes: React Router's Workers rendering needed a custom `app/entry.server.tsx`. 
 
 **Done when:** the owner approves a direction (AC-021). Styling is not applied app-wide before approval.
 
+#### M1 status (2026-11-03, branch `feature/m1-design-direction`)
+
+- [x] Round 1: three directions (Kitchen Notebook, Market Bold, Night Kitchen), each with a phone catalog and recipe page, using shared sample content with photo, no-photo, and idea entries.
+- [x] Owner chose A and added a viewer-selectable dark mode (D17).
+- [x] Round 2 in direction A: dark catalog and recipe; recipe editor; AI review queue; connector consent page; desktop catalog with the theme menu; empty, loading, and error states.
+- [x] **Owner approved the direction (AC-021).**
+
+Sources are committed in `design/m1/` and viewable on the private design canvas. Photos are placeholders. M2 turns the palettes and type in `design/m1/README.md` into app styles.
+
 ### M2 — Core catalog
 
+- Design system from the approved direction (D17): light and dark color tokens, Newsreader and Public Sans, and the System / Light / Dark preference, applied server-side from a cookie so pages never flash the wrong theme (AC-071, AC-072).
 - Public browsing, FTS5 search, filters by tag and collection, recipe detail with schema.org Recipe markup, noindex.
 - Admin editor for recipes and ideas (title-only ideas allowed), links, tags, collections.
 - Soft delete (inactive records) and a recovery view.
 - Server-side authorization on every write.
 
-**Done when:** AC-001, 003, 005 (excluding photos), 009, 022, 023, 026, 027, 037, 062–065, 068, 069 pass.
+**Done when:** AC-001, 003, 005 (excluding photos), 009, 022, 023, 026, 027, 037, 062–065, 068, 069, 071, 072 pass.
 
 ### M3 — Photos, history, backup
 
