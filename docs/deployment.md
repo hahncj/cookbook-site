@@ -55,6 +55,18 @@ The Worker is named **`cookbook-site`** (the `name` in [wrangler.jsonc](../hosti
 
 The custom domain route in `wrangler.jsonc` creates the DNS record and certificate on first deploy.
 
+### GitHub builds (Workers Builds)
+
+The Worker is connected to this repository in **Workers & Pages → cookbook-site → Settings → Build**:
+
+| Setting | Value |
+| --- | --- |
+| Production branch | `main` |
+| Non-production branch builds | Enabled |
+| Non-production branch deploy command | `npm run build` |
+
+Pull request branches are **build-only checks**: they confirm the app builds and deploy nothing. Preview deploys are off on purpose. Wrangler refuses to upload a preview unless `wrangler.jsonc` has a `previews` block naming preview-only resources (so previews never touch the production `cookbook` database or `cookbook-media` bucket). Google sign-in also cannot work on preview URLs, because each one is different and Google OAuth does not accept wildcard redirect URIs. If live previews become useful, add a `previews` block with a separate D1 database and R2 bucket, then set the non-production deploy command back to `npx wrangler versions upload`.
+
 ### Measure CPU time on the free plan (M0)
 
 The free plan allows about 10 ms of CPU per request (waiting on the database or network does not count). After deploying:
