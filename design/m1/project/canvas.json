@@ -1,0 +1,30 @@
+{
+  "v": 3,
+  "attachments": {},
+  "createdOnFiles": { "at": "2026-11-03T20:28:43.662Z", "v": 1 },
+  "title": "Cookbook design directions",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 260, "w": 390, "h": 844, "title": "A · Catalog (phone)" },
+    "A-recipe.dc.html": { "x": 470, "y": 260, "w": 390, "h": 1560, "title": "A · Recipe (phone)" },
+    "B-catalog.dc.html": { "x": 0, "y": 2200, "w": 390, "h": 844, "title": "B · Catalog (phone)" },
+    "B-recipe.dc.html": { "x": 470, "y": 2200, "w": 390, "h": 1560, "title": "B · Recipe (phone)" },
+    "C-catalog.dc.html": { "x": 0, "y": 4140, "w": 390, "h": 844, "title": "C · Catalog (phone)" },
+    "C-recipe.dc.html": { "x": 470, "y": 4140, "w": 390, "h": 1560, "title": "C · Recipe (phone)" }
+  },
+  "order": [
+    "Main.dc.html",
+    "A-recipe.dc.html",
+    "B-catalog.dc.html",
+    "B-recipe.dc.html",
+    "C-catalog.dc.html",
+    "C-recipe.dc.html"
+  ],
+  "notes": {
+    "dirA": { "x": 0, "y": 0, "text": "A · Kitchen Notebook", "kind": "title1", "maxW": 860 },
+    "dirB": { "x": 0, "y": 1940, "text": "B · Market Bold", "kind": "title1", "maxW": 860 },
+    "dirC": { "x": 0, "y": 3880, "text": "C · Night Kitchen", "kind": "title1", "maxW": 860 }
+  },
+  "designSystems": []
+}
