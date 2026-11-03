@@ -1,6 +1,7 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
-  "name": "cookbook",
+  // Must match the Worker name in the Cloudflare dashboard (GitHub builds require it).
+  "name": "cookbook-site",
   "main": "./worker.ts",
   "compatibility_date": "2026-11-01",
   "compatibility_flags": ["nodejs_compat"],
@@ -8,18 +9,17 @@
   // Custom domain (D4). Requires chrisandelissa.com to be a zone in this Cloudflare account.
   "routes": [{ "pattern": "cookbook.chrisandelissa.com", "custom_domain": true }],
   "vars": {
-    "PUBLIC_BASE_URL": "https://cookbook.chrisandelissa.com",
-    // Comma-separated admin Google emails (D5). Set with the real addresses before deploying.
-    "ADMIN_EMAILS": "REPLACE_WITH_ADMIN_EMAILS"
+    "PUBLIC_BASE_URL": "https://cookbook.chrisandelissa.com"
   },
-  // Secrets (set with `wrangler secret put`, never committed):
-  //   BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+  // Secrets (set with `wrangler secret put <NAME> --name cookbook-site`, never committed):
+  //   ADMIN_EMAILS (kept out of this public repo), BETTER_AUTH_SECRET,
+  //   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "cookbook",
       // Replace with the id printed by `wrangler d1 create cookbook`.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "0efff115-3d4a-4a3e-be8f-e281cc1db37a",
       "migrations_dir": "../../db/migrations"
     }
   ],
