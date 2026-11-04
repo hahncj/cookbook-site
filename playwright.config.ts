@@ -21,6 +21,9 @@ const serverEnv = (baseURL: string, dir: string, port: number) => ({
   GOOGLE_CLIENT_SECRET: "e2e",
   DATABASE_PATH: `${dir}/cookbook.db`,
   MEDIA_DIR: `${dir}/media`,
+  // The main instance talks to a local mock of the Claude API (no paid calls);
+  // the fresh instance has no key, so it shows AI as not set up (AC-036).
+  ...(port === PORT ? { ANTHROPIC_API_KEY: "mock-key", ANTHROPIC_BASE_URL: "http://localhost:3102" } : {}),
 });
 
 export default defineConfig({
@@ -30,6 +33,11 @@ export default defineConfig({
   reporter: [["list"]],
   use: { baseURL: E2E.baseURL, trace: "retain-on-failure" },
   webServer: [
+    {
+      command: "node tests/e2e/mock-anthropic.mjs",
+      url: "http://localhost:3102/health",
+      reuseExistingServer: false,
+    },
     {
       command: `rm -rf ${E2E.dir} ${E2E.fresh.dir} && npm run build:node && node hosting/node/server.js`,
       url: `${E2E.baseURL}/health`,

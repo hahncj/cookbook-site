@@ -13,6 +13,9 @@ import { createCatalogRepository } from "./adapters/catalog-repo";
 import { createCatalog, type Catalog } from "./core/catalog";
 import { isAdminEmail } from "./core/admin";
 import { servePhoto } from "./photos";
+import { notConfigured, type RecipeAi } from "./core/ai";
+import { createAnthropicAi } from "./ai/anthropic";
+import { createPageFetcher, type PageFetcher } from "./importers/fetch-page";
 
 /** Everything a request handler may use. Built per request by the host adapter. */
 export interface Services {
@@ -23,6 +26,10 @@ export interface Services {
   media: MediaStore | null;
   catalog: Catalog;
   submissions: Submissions;
+  /** In-app AI (admin-only). A stub that reports "not set up" when there's no key. */
+  ai: RecipeAi;
+  /** Fetches web pages for link import, with SSRF protection. */
+  fetchPage: PageFetcher;
 }
 
 export interface HostDeps {
@@ -30,6 +37,9 @@ export interface HostDeps {
   db: Database;
   media: MediaStore | null;
   fetchClientMetadata: ClientMetadataResourceFetch;
+  /** Tests inject fakes. */
+  ai?: RecipeAi;
+  fetchPage?: PageFetcher;
 }
 
 export function createServices(deps: HostDeps): Services {
@@ -43,6 +53,16 @@ export function createServices(deps: HostDeps): Services {
     auth: createAuth({ config: deps.config, db: deps.db, fetchClientMetadata: deps.fetchClientMetadata }),
     catalog,
     submissions: createSubmissions({ repo: createSubmissionsRepository(deps.db), catalog, now, newId }),
+    ai:
+      deps.ai ??
+      (deps.config.anthropic
+        ? createAnthropicAi({
+            apiKey: deps.config.anthropic.apiKey,
+            model: deps.config.anthropic.model ?? undefined,
+            baseUrl: deps.config.anthropic.baseUrl ?? undefined,
+          })
+        : notConfigured),
+    fetchPage: deps.fetchPage ?? createPageFetcher(),
   };
 }
 

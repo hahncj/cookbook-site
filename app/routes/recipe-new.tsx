@@ -12,7 +12,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const services = context.get(servicesContext);
   await requireAdminPage(request, services);
   const kind = new URL(request.url).searchParams.get("kind") === "idea" ? "idea" : "recipe";
-  return { values: emptyFormValues(kind), collections: await services.catalog.listCollections() };
+  return { values: emptyFormValues(kind), collections: await services.catalog.listCollections(), aiEnabled: services.ai.configured };
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -29,6 +29,8 @@ export default function NewRecipe({ loaderData, actionData }: Route.ComponentPro
       values={values}
       errors={actionData?.errors}
       collections={loaderData.collections}
+      aiEnabled={loaderData.aiEnabled}
+      checkDuplicates
     />
   );
 }

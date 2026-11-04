@@ -253,6 +253,30 @@ Also verified against the Cloudflare build in local workerd with D1: migration 0
 
 **Done when:** AC-007, 008, 010, 033, 036, 045–049, 057, 066, 067 pass, plus one live smoke test against Claude.
 
+#### M5 status (2026-11-03, branch `feature/m5-in-app-ai`)
+
+Verified by automated tests (`npm run check`: 148 unit/integration tests; `npm run test:e2e`: 95 browser checks across phone, tablet and desktop). Server tests use a fake AI that records every call. Browser tests run the real Claude adapter against a local mock of the Messages API.
+
+| Check | How it was verified |
+| --- | --- |
+| AC-007, AC-045 | Ingredient identification works with a description alone, a photo alone (upload or a saved photo), and both, on new and existing recipes |
+| AC-046 | Suggestions are names only. Added rows have blank amounts. Imports keep amounts as written and leave missing ones blank |
+| AC-047 | Suggestions are editable and unsure ones are marked and unchecked. "Add chosen" only appends rows; other fields and existing rows are untouched. Nothing is saved until the owner presses Save |
+| AC-008 | Link import reads schema.org recipe data without AI and falls back to Claude on the page text. Photo import reads a recipe card or screenshot |
+| AC-010 | In-app AI uses Claude (`claude-opus-5-5`, structured output, refusal fallbacks on) through the Anthropic SDK |
+| AC-033 | "No recipe found", unreachable pages, blocked sites, non-images and AI errors each get a plain message; nothing is filled in or saved |
+| AC-036 | Without an API key, AI features say they aren't set up. Saved recipes, manual editing and link import with recipe data still work |
+| AC-048 | Failed imports keep the pasted text or link. Failed identification leaves the form exactly as it was |
+| AC-049 | A pasted chat recipe is reviewed in the editor, saved with origin "paste", and found by search |
+| AC-057 | Free word-overlap matching flags possible duplicates on new recipes, imports and AI-tool submissions in Review. "Check with AI" runs only when pressed. Nothing is merged or deleted |
+| AC-066, AC-067 | Signed-out (401) and non-admin (403) requests to every AI route are refused before any fetch or Claude call (the fake records zero calls). Public browsing and search make no AI calls |
+
+Also verified against the Cloudflare build in local workerd: the Anthropic SDK loads and runs in the Worker, an admin paste import and ingredient identification complete against the mock, and AI routes refuse signed-out requests.
+
+Link fetching is SSRF-safe: http(s) only, standard ports, no private, local or credentialed addresses, every redirect re-checked, 3 MB and 15-second limits.
+
+**Remaining for the owner:** set `ANTHROPIC_API_KEY` (production secret, plus `hosting/cloudflare/.dev.vars` locally), then run the live smoke test (`ANTHROPIC_API_KEY=... npm run smoke:ai`) and try one real paste, link and photo import on the site.
+
 ### M6 — Cooking and Lose It!
 
 - Serving adjustment (fractions, ranges, unscalable items flagged); cooking mode with Screen Wake Lock and an explanation when unsupported.

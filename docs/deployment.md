@@ -11,6 +11,9 @@ How to deploy the cookbook to Cloudflare (primary host) and to the Node/Docker a
 | `BETTER_AUTH_SECRET` | secret | At least 32 random characters: `openssl rand -base64 32` |
 | `GOOGLE_CLIENT_ID` | secret | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | secret | Google OAuth client secret |
+| `ANTHROPIC_API_KEY` | secret, optional | Claude API key for in-app AI (imports, ingredient identification, "Check with AI"). Without it those features say they aren't set up; everything else works |
+| `ANTHROPIC_MODEL` | var, optional | Claude model for in-app AI. Default `claude-opus-5-5` |
+| `ANTHROPIC_BASE_URL` | var, optional | Only for an API gateway or proxy (the browser tests point it at a local mock). Leave unset |
 | `CLIENT_IP_HEADER` | var, optional | Trusted client-IP header for auth rate limiting. Default `cf-connecting-ip` on Cloudflare, `x-forwarded-for` on Node |
 | `DATABASE_PATH`, `MEDIA_DIR`, `PORT` | var, Node only | SQLite file, photo folder, and port (defaults in the Dockerfile) |
 
@@ -44,6 +47,7 @@ The Worker is named **`cookbook-site`** (the `name` in [wrangler.jsonc](../hosti
    npx wrangler secret put GOOGLE_CLIENT_ID --name cookbook-site
    npx wrangler secret put GOOGLE_CLIENT_SECRET --name cookbook-site
    openssl rand -base64 32 | npx wrangler secret put BETTER_AUTH_SECRET --name cookbook-site
+   npx wrangler secret put ANTHROPIC_API_KEY --name cookbook-site   # optional: in-app AI (M5)
    npx wrangler secret list --name cookbook-site
    ```
 3. Apply database migrations and deploy:
@@ -113,6 +117,7 @@ docker run -d -p 3000:3000 -v cookbook-data:/data \
   -e PUBLIC_BASE_URL=https://<your-alt-host> \
   -e ADMIN_EMAILS=... -e BETTER_AUTH_SECRET=... \
   -e GOOGLE_CLIENT_ID=... -e GOOGLE_CLIENT_SECRET=... \
+  -e ANTHROPIC_API_KEY=... \
   cookbook
 ```
 
@@ -135,7 +140,18 @@ npm run db:migrate:local
 npm run dev                # http://localhost:5173 in the Cloudflare runtime (workerd)
 npm run check              # typecheck, lint, unit and integration tests
 npm run test:e2e           # browser checks: layout at phone/tablet/desktop, accessibility, themes, admin flow
+ANTHROPIC_API_KEY=sk-ant-... npm run smoke:ai   # live Claude check (a few cents); not part of check or test:e2e
 ```
+
+Automated tests never call Claude: server tests use a fake, and browser tests run the real adapter against a local mock of the API (`tests/e2e/mock-anthropic.mjs`).
+
+### In-app AI (M5)
+
+- Admin-only. The admin check runs before any page fetch or Claude call, so visitors, search and public pages never cost anything.
+- Model: `claude-opus-5-5` by default (`ANTHROPIC_MODEL` to change). Refusal fallbacks are on (`fallbacks: "default"`): if the model declines a request, the API retries it once on its default fallback model.
+- Link import reads the page's own schema.org recipe data first (free). Claude is used only when a page has none.
+- Link fetching refuses private and local addresses, re-checks every redirect, and stops at 3 MB or 15 seconds.
+- Photos sent for identification or import are resized in the browser first. They're only kept if you choose "Also add this photo to the recipe".
 
 `test:e2e` builds the Node host and runs it on port 3100 against a throwaway database in `.e2e/`. The first run needs browsers: `npx playwright install chromium webkit`.
 

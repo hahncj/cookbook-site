@@ -99,3 +99,16 @@ export async function servePhoto(
     },
   });
 }
+
+/** Reads a stored photo's full-size bytes (for AI ingredient identification). */
+export async function readPhotoBytes(
+  deps: { db: Database; media: MediaStore | null },
+  id: string,
+): Promise<{ bytes: Uint8Array; contentType: string } | null> {
+  if (!deps.media || !/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const [row] = await deps.db.select({ ext: photos.ext, contentType: photos.contentType }).from(photos).where(eq(photos.id, id.toLowerCase())).limit(1);
+  if (!row) return null;
+  const object = await deps.media.get(photoKey(id.toLowerCase(), row.ext, false));
+  if (!object) return null;
+  return { bytes: new Uint8Array(await new Response(object.body).arrayBuffer()), contentType: row.contentType };
+}

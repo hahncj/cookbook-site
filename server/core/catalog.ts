@@ -4,6 +4,7 @@ import type { Change, Revision, RevisionInfo, RevisionOrigin } from "./history";
 import { diffSnapshots, snapshotOfEntry, snapshotToInput } from "./history";
 import type { Entry, EntryInput, EntryKind, EntryOrigin, EntrySummary, NamedRef } from "./recipes";
 import { buildSearchQuery } from "./recipes";
+import { anyKeywordQuery, findDuplicates, type DuplicateCandidate, type DuplicateInput, type DuplicateMatch } from "./duplicates";
 
 export interface ListQuery {
   /** FTS5 query built by buildSearchQuery, or null for no text search. */
@@ -53,6 +54,8 @@ export interface CatalogRepository {
   getRevision(id: string, revision: number): Promise<Revision | null>;
   addNote(recipeId: string, body: string, meta: { id: string; now: Date; actor: Actor }): Promise<void>;
   listNotes(recipeId: string): Promise<ExperimentNote[]>;
+  /** Active entries whose text matches the FTS query (for duplicate checks). */
+  similarCandidates(match: string, limit: number): Promise<DuplicateCandidate[]>;
 }
 
 export interface CatalogDeps {
@@ -194,6 +197,14 @@ export function createCatalog({ repo, now, newId }: CatalogDeps) {
     },
 
     listNotes: (recipeId: string) => repo.listNotes(recipeId),
+
+    /** Free duplicate check (D8): word overlap only, no AI. Never changes anything (AC-057). */
+    async findSimilar(draft: DuplicateInput, options: { excludeId?: string | null } = {}): Promise<DuplicateMatch[]> {
+      const match = anyKeywordQuery(draft.title);
+      if (!match) return [];
+      const candidates = (await repo.similarCandidates(match, 40)).filter((c) => c.id !== options.excludeId);
+      return findDuplicates(draft, candidates);
+    },
   };
 }
 
