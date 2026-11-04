@@ -114,44 +114,53 @@ function SiteHeader() {
   );
 }
 
+type SearchMode = "search" | "write" | "web";
+
 /**
- * The search bar. Admins also get an AI toggle (M7): with it on, the box asks
- * Claude for NEW recipes (web finds and AI-written ones, shaped by the
- * preference profile) instead of searching the cookbook. That's a paid call,
- * so it is a POST that the server checks, never a plain page load.
+ * The search bar. Admins also get a small AI | Web toggle (M7, D21): with
+ * one selected, the box asks Claude for NEW recipes instead of searching the
+ * cookbook. AI writes them; Web finds real pages. Tapping the selected one
+ * again goes back to normal search. That's a paid call, so it is a POST the
+ * server checks, never a plain page load.
  */
 function HeaderSearch({ query, isAdmin }: { query: string; isAdmin: boolean }) {
   const location = useLocation();
   const navigation = useNavigation();
   const onDiscover = location.pathname === "/discover";
-  const [ai, setAi] = useState(onDiscover);
-  useEffect(() => setAi(onDiscover), [onDiscover]);
-  // The source and preference choices are remembered on this device.
-  const [source, setSource] = useState<"write" | "web">("write");
-  const [usePrefs, setUsePrefs] = useState(true);
+  const [mode, setMode] = useState<SearchMode>("search");
+  // On the results page, stay in the mode last used (remembered on this device).
   useEffect(() => {
+    if (!onDiscover) return setMode("search");
+    let last: SearchMode = "write";
     try {
-      if (localStorage.getItem("aiSource") === "web") setSource("web");
-      if (localStorage.getItem("aiPrefs") === "off") setUsePrefs(false);
+      if (localStorage.getItem("aiSource") === "web") last = "web";
     } catch {
-      // Storage unavailable: keep the defaults.
+      // Storage unavailable: default to AI.
     }
-  }, []);
-  const remember = (key: string, value: string) => {
-    try {
-      localStorage.setItem(key, value);
-    } catch {
-      // Storage unavailable: the choice lasts for this page only.
+    setMode(last);
+  }, [onDiscover]);
+  const choose = (next: "write" | "web") => {
+    const value = mode === next ? "search" : next;
+    setMode(value);
+    if (value !== "search") {
+      try {
+        localStorage.setItem("aiSource", value);
+      } catch {
+        // Storage unavailable: nothing to remember.
+      }
     }
   };
-  const aiMode = isAdmin && ai;
+  const aiMode = isAdmin && mode !== "search";
   const finding = navigation.state === "submitting" && navigation.formAction === "/discover";
   const findingWeb = finding && navigation.formData?.get("source") === "web";
+  const label = mode === "web" ? "Describe new recipes to find on the web" : mode === "write" ? "Describe new recipes for AI to write" : "Search recipes";
+  const placeholder =
+    mode === "web" ? "Find recipes on the web, e.g. fall stew" : mode === "write" ? "Describe a recipe for AI to write" : "Search titles, ingredients, notes";
   return (
     <div className="header-search">
       <Form method={aiMode ? "post" : "get"} action={aiMode ? "/discover" : "/"} role="search" className={`search${isAdmin ? " search-with-ai" : ""}`}>
         <label htmlFor="site-search" className="visually-hidden">
-          {aiMode ? "Describe new recipes to find with AI" : "Search recipes"}
+          {aiMode ? label : "Search recipes"}
         </label>
         {aiMode ? <SparkleIcon /> : <SearchIcon />}
         <input
@@ -160,51 +169,32 @@ function HeaderSearch({ query, isAdmin }: { query: string; isAdmin: boolean }) {
           name="q"
           defaultValue={query}
           key={query}
-          placeholder={aiMode ? "Find new recipes with AI, e.g. quick vegetarian dinner" : "Search titles, ingredients, notes"}
+          placeholder={aiMode ? placeholder : "Search titles, ingredients, notes"}
           maxLength={aiMode ? 500 : undefined}
           required={aiMode}
           readOnly={finding}
-          aria-describedby={aiMode ? "ai-options" : undefined}
         />
+        {aiMode && <input type="hidden" name="source" value={mode} />}
         {isAdmin && (
-          <button
-            type="button"
-            className={`ai-toggle${aiMode ? " ai-toggle-on" : ""}`}
-            aria-pressed={aiMode}
-            onClick={() => setAi((value) => !value)}
-            title={aiMode ? "AI mode on: finds new recipes" : "Turn on AI mode to find new recipes"}
-          >
-            AI<span className="visually-hidden"> mode: find new recipes</span>
-          </button>
-        )}
-        {aiMode && (
-          <div className="ai-options" id="ai-options">
-            <fieldset className="segmented ai-source">
-              <legend className="visually-hidden">Where new recipes come from</legend>
-              <label>
-                <input
-                  type="radio"
-                  name="source"
-                  value="write"
-                  checked={source === "write"}
-                  onChange={() => (setSource("write"), remember("aiSource", "write"))}
-                />
-                Write with AI
-              </label>
-              <label>
-                <input type="radio" name="source" value="web" checked={source === "web"} onChange={() => (setSource("web"), remember("aiSource", "web"))} />
-                Find on the web
-              </label>
-            </fieldset>
-            <label className="check ai-prefs">
-              <input
-                type="checkbox"
-                name="prefs"
-                checked={usePrefs}
-                onChange={(e) => (setUsePrefs(e.target.checked), remember("aiPrefs", e.target.checked ? "on" : "off"))}
-              />
-              Use my preferences
-            </label>
+          <div className="ai-switch" role="group" aria-label="Find new recipes">
+            <button
+              type="button"
+              aria-pressed={mode === "write"}
+              aria-label="AI: write new recipes"
+              onClick={() => choose("write")}
+              title={mode === "write" ? "Back to searching your recipes" : "Have AI write new recipes"}
+            >
+              AI
+            </button>
+            <button
+              type="button"
+              aria-pressed={mode === "web"}
+              aria-label="Web: find new recipes"
+              onClick={() => choose("web")}
+              title={mode === "web" ? "Back to searching your recipes" : "Find new recipes on the web"}
+            >
+              Web
+            </button>
           </div>
         )}
       </Form>
