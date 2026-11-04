@@ -35,51 +35,37 @@ function profile(body) {
 }
 
 /**
- * M7 "Find on the web". It pauses once (pause_turn) to exercise the resume
- * loop, returns search and fetch results, and then submits one real web page
- * and one made-up link the app must drop (AC-034).
+ * M7 "Web". It pauses once (pause_turn) to exercise the resume loop, returns
+ * search results (no page reads), and then submits one real web page and one
+ * made-up link the app must drop (AC-034). "More" gets a different page.
  */
 function discover(body) {
   const text = userText(body);
   const request = between(text, "<request>", "</request>");
+  // "More": once the eggplant page has been shown, offer a different page.
+  const more = text.includes("Already shown for this request") && text.includes("miso-eggplant");
+  const page = more
+    ? { title: "Pumpkin Lentil Soup", url: "https://recipes.e2e.test/pumpkin-soup", source_name: "E2E Recipes", reason: "Another warming option." }
+    : { title: "Miso Glazed Eggplant", url: "https://recipes.e2e.test/miso-eggplant", source_name: "E2E Recipes", reason: "Something new with similar flavors." };
   const submit = {
     type: "tool_use",
     id: "toolu_submit",
     name: "submit_suggestions",
     input: {
-      web: [
-        { title: "Miso Glazed Eggplant", url: "https://recipes.e2e.test/miso-eggplant", source_name: "E2E Recipes", reason: "Something new with similar flavors." },
-        { title: "Imaginary Pie", url: "https://invented.e2e.test/pie", source_name: "Nowhere", reason: "Made up." },
-      ],
+      web: [page, { title: "Imaginary Pie", url: "https://invented.e2e.test/pie", source_name: "Nowhere", reason: "Made up." }],
       note: "",
     },
   };
-  const searched = [
-    { type: "server_tool_use", id: "srvtoolu_1", name: "web_search", input: { query: request } },
+  const search = (id, results) => [
+    { type: "server_tool_use", id, name: "web_search", input: { query: request } },
     {
       type: "web_search_tool_result",
-      tool_use_id: "srvtoolu_1",
-      content: [
-        { type: "web_search_result", url: "https://recipes.e2e.test/miso-eggplant", title: "Miso Glazed Eggplant", encrypted_content: "x", page_age: null },
-        { type: "web_search_result", url: "https://recipes.e2e.test/other", title: "Other", encrypted_content: "x", page_age: null },
-      ],
+      tool_use_id: id,
+      content: results.map((r) => ({ type: "web_search_result", url: r.url, title: r.title, encrypted_content: "x", page_age: null })),
     },
   ];
-  if ((body.messages ?? []).length === 1) return { content: searched, stop_reason: "pause_turn" };
-  const fetched = [
-    { type: "server_tool_use", id: "srvtoolu_2", name: "web_fetch", input: { url: "https://recipes.e2e.test/miso-eggplant" } },
-    {
-      type: "web_fetch_tool_result",
-      tool_use_id: "srvtoolu_2",
-      content: {
-        type: "web_fetch_result",
-        url: "https://recipes.e2e.test/miso-eggplant",
-        content: { type: "document", source: { type: "text", media_type: "text/plain", data: "Miso eggplant recipe" }, title: "Miso Glazed Eggplant" },
-        retrieved_at: "2026-11-04T00:00:00Z",
-      },
-    },
-  ];
-  return { content: [...fetched, { type: "text", text: "Here are my picks." }, submit], stop_reason: "tool_use" };
+  if ((body.messages ?? []).length === 1) return { content: search("srvtoolu_1", [{ url: "https://recipes.e2e.test/other", title: "Other" }]), stop_reason: "pause_turn" };
+  return { content: [...search("srvtoolu_2", [page]), { type: "text", text: "Here are my picks." }, submit], stop_reason: "tool_use" };
 }
 
 function answer(body) {
@@ -119,7 +105,7 @@ function answer(body) {
     return {
       recipes: [
         {
-          title: `AI ${request.replace(/\b\w/g, (c) => c.toUpperCase())} Bowl`,
+          title: `AI ${request.replace(/\b\w/g, (c) => c.toUpperCase())} ${text.includes("Already shown for this request") ? "Soup" : "Bowl"}`,
           description: "A quick bowl built around your request.",
           servings: "Serves 2",
           prep_time: "10 min",

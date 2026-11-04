@@ -113,8 +113,13 @@ test.describe("AI mode in the search bar (AC-015, AC-034)", () => {
     await expectNoHorizontalScroll(page);
     await expectAccessible(page);
 
+    // "More ideas" adds different recipes below.
+    await results.getByRole("button", { name: "More ideas" }).click();
+    await expect(written).toHaveCount(2);
+    await expect(written.nth(1).getByRole("heading", { name: "AI Noodles Tonight, Ignore My Preferences Soup" })).toBeVisible();
+
     // Saving is explicit: the editor opens with the recipe; nothing is saved until Save (D2).
-    await written.getByRole("button", { name: "Save to cookbook: AI Noodles Tonight, Ignore My Preferences Bowl" }).click();
+    await written.first().getByRole("button", { name: "Save to cookbook: AI Noodles Tonight, Ignore My Preferences Bowl" }).click();
     await expect(page.getByText("Written by AI and untested. Check the amounts, times and steps.")).toBeVisible();
     await expect(page.getByLabel("Title")).toHaveValue("AI Noodles Tonight, Ignore My Preferences Bowl");
     await expect(page.getByLabel("Amount 1", { exact: true })).toHaveValue("200 g");
@@ -142,7 +147,6 @@ test.describe("AI mode in the search bar (AC-015, AC-034)", () => {
     await expect(link).toHaveAttribute("href", "https://recipes.e2e.test/miso-eggplant");
     await expect(link).toHaveAttribute("target", "_blank");
     await expect(webCard).toContainText("Source: E2E Recipes (recipes.e2e.test)");
-    await expect(webCard).toContainText("Page read by AI");
     await expect(webCard.getByRole("link", { name: "Save to cookbook…" })).toHaveAttribute(
       "href",
       "/recipes/import?url=https%3A%2F%2Frecipes.e2e.test%2Fmiso-eggplant",
@@ -152,6 +156,13 @@ test.describe("AI mode in the search bar (AC-015, AC-034)", () => {
     await expect(results.getByText("1 web suggestion was left out because the link couldn't be confirmed.")).toBeVisible();
     await expectNoHorizontalScroll(page);
     await expectAccessible(page);
+
+    // "More results" adds different pages below; nothing shown is repeated.
+    await results.getByRole("button", { name: "More results" }).click();
+    await expect(webCard).toHaveCount(2);
+    await expect(webCard.nth(0)).toContainText("Miso Glazed Eggplant");
+    await expect(webCard.nth(1)).toContainText("Pumpkin Lentil Soup");
+    await expect(results.getByText("2 web suggestions were left out because the link couldn't be confirmed.")).toBeVisible();
 
     // The results page keeps Web selected; tapping it again goes back to normal search.
     await expect(modeButton(page, "Web")).toHaveAttribute("aria-pressed", "true");

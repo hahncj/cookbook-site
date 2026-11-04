@@ -17,6 +17,8 @@ import type { DigestSource } from "./preferences";
 import { LIMITS } from "./recipes";
 
 export const REQUEST_MAX = 500;
+/** "More" sends what was already shown; capped so the prompt stays small. */
+export const MAX_EXCLUDE = 40;
 export const MAX_WEB = 4;
 export type DiscoverSource = "write" | "web";
 export const MAX_WRITTEN = 3;
@@ -101,12 +103,20 @@ const orNull = (value: string, max: number) => tidy(value, max) || null;
 export function createDiscovery({ ai, digestSources, signals, profile, now }: DiscoveryDeps) {
   return {
     /** Admin-only: the caller checks access before calling (AC-066/067). */
-    async discover(input: { request: unknown; source: DiscoverSource }): Promise<DiscoverOutcome> {
+    /** `exclude`: results already shown for this request, so "More" finds different ones. */
+    async discover(input: { request: unknown; source: DiscoverSource; exclude?: unknown }): Promise<DiscoverOutcome> {
       const request = typeof input.request === "string" ? tidy(input.request, REQUEST_MAX + 1) : "";
       if (!request) return { ok: false, reason: "invalid", message: "Describe what you'd like to cook first." };
       if (request.length > REQUEST_MAX) return { ok: false, reason: "invalid", message: `Keep the request under ${REQUEST_MAX} characters.` };
 
       const { source } = input;
+      const exclude = (Array.isArray(input.exclude) ? input.exclude : [])
+        .filter((v): v is string => typeof v === "string")
+        .map((v) => tidy(v, LIMITS.url))
+        .filter(Boolean)
+        .slice(0, MAX_EXCLUDE);
+      const shownUrls = new Set(exclude.map(normalizeUrl).filter((v): v is string => Boolean(v)));
+      const shownTitles = new Set(exclude.map((v) => v.toLowerCase()));
       const usePreferences = !wantsNoPreferences(request);
       const [sources, markerSignals, prefs] = await Promise.all([
         digestSources(),
@@ -127,6 +137,7 @@ export function createDiscovery({ ai, digestSources, signals, profile, now }: Di
         rejected: prefs ? prefs.rejected : [],
         favorites,
         cookbookTitles: sources.slice(0, MAX_TITLES).map((s) => s.title),
+        exclude,
         today: now().toISOString().slice(0, 10),
       });
       if (!result.ok) return result;
@@ -154,7 +165,7 @@ export function createDiscovery({ ai, digestSources, signals, profile, now }: Di
           droppedUnverified += 1;
           continue;
         }
-        if (web.some((x) => normalizeUrl(x.url) === key) || web.length >= MAX_WEB) continue;
+        if (shownUrls.has(key) || web.some((x) => normalizeUrl(x.url) === key) || web.length >= MAX_WEB) continue;
         const host = new URL(found.url).hostname.replace(/^www\./, "");
         web.push({
           kind: "web",
@@ -176,7 +187,7 @@ export function createDiscovery({ ai, digestSources, signals, profile, now }: Di
           .slice(0, LIMITS.ingredients);
         const steps = r.steps.map((s) => s.trim()).filter(Boolean).slice(0, LIMITS.steps);
         // A written recipe must be a whole recipe: title, ingredients and steps.
-        if (!title || ingredients.length === 0 || steps.length === 0 || written.length >= MAX_WRITTEN) continue;
+        if (!title || shownTitles.has(title.toLowerCase()) || ingredients.length === 0 || steps.length === 0 || written.length >= MAX_WRITTEN) continue;
         written.push({
           kind: "written",
           title,
