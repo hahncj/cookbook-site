@@ -17,31 +17,38 @@ async function getJson(fetchImpl: typeof fetch, url: URL, headers: Record<string
   return response.json();
 }
 
-/** Free stock photos from Pexels (https://www.pexels.com/api/). Credit: "Photo: <photographer> / Pexels". */
-export function createPexelsSearch(options: { apiKey: string; baseUrl?: string | null; fetchImpl?: typeof fetch }): PhotoSearchProvider {
-  const base = (options.baseUrl ?? "https://api.pexels.com").replace(/\/+$/, "");
+/**
+ * Free stock photos from Pixabay (https://pixabay.com/api/docs/). Credit:
+ * "Photo: <user> / Pixabay". Pixabay asks that its images are not hotlinked
+ * permanently; chosen photos are downloaded and stored, so that fits. The key
+ * goes in the query string (Pixabay's only option); never log these URLs.
+ */
+export function createPixabaySearch(options: { apiKey: string; baseUrl?: string | null; fetchImpl?: typeof fetch }): PhotoSearchProvider {
+  const base = (options.baseUrl ?? "https://pixabay.com").replace(/\/+$/, "");
   const fetchImpl = options.fetchImpl ?? fetch;
   return {
     async search(query, limit) {
-      const url = new URL(`${base}/v1/search`);
-      url.searchParams.set("query", query);
-      url.searchParams.set("per_page", String(limit));
-      url.searchParams.set("orientation", "landscape");
-      const body = (await getJson(fetchImpl, url, { authorization: options.apiKey })) as { photos?: unknown };
-      const photos = Array.isArray(body.photos) ? body.photos : [];
-      return photos.flatMap((raw): PhotoCandidate[] => {
-        const photo = (raw ?? {}) as Record<string, unknown>;
-        const src = (photo.src ?? {}) as Record<string, unknown>;
-        const imageUrl = httpUrl(src.large2x) || httpUrl(src.large) || httpUrl(src.original);
+      const url = new URL(`${base}/api/`);
+      url.searchParams.set("key", options.apiKey);
+      url.searchParams.set("q", query.slice(0, 100));
+      url.searchParams.set("image_type", "photo");
+      url.searchParams.set("orientation", "horizontal");
+      url.searchParams.set("safesearch", "true");
+      url.searchParams.set("per_page", String(Math.min(200, Math.max(3, limit)))); // Pixabay allows 3–200
+      const body = (await getJson(fetchImpl, url, {})) as { hits?: unknown };
+      const hits = Array.isArray(body.hits) ? body.hits : [];
+      return hits.flatMap((raw): PhotoCandidate[] => {
+        const hit = (raw ?? {}) as Record<string, unknown>;
+        const imageUrl = httpUrl(hit.largeImageURL) || httpUrl(hit.webformatURL);
         if (!imageUrl) return [];
         return [
           {
             imageUrl,
-            previewUrl: httpUrl(src.medium) || imageUrl,
+            previewUrl: httpUrl(hit.webformatURL) || imageUrl,
             source: "stock",
-            credit: creditLine(str(photo.photographer) || "Unknown photographer", "Pexels"),
-            pageUrl: httpUrl(photo.url) || null,
-            description: str(photo.alt) || "Stock photo",
+            credit: creditLine(str(hit.user) || "Unknown photographer", "Pixabay"),
+            pageUrl: httpUrl(hit.pageURL) || null,
+            description: str(hit.tags) ? `Stock photo: ${str(hit.tags)}` : "Stock photo",
           },
         ];
       });

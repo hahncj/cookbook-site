@@ -1,6 +1,6 @@
 // A stand-in for the Claude Messages API, used only by the browser tests so
 // the real adapter runs end to end without paid calls. Answers by task.
-// Also stands in for the Pexels and Brave image search APIs (E1). Their image
+// Also stands in for the Pixabay and Brave image search APIs (E1). Their image
 // URLs use a .test host that the browser tests intercept.
 import { createServer } from "node:http";
 
@@ -45,16 +45,20 @@ function answer(body) {
 }
 
 function photoSearch(url) {
-  const query = url.searchParams.get("query") ?? url.searchParams.get("q") ?? "";
+  const query = url.searchParams.get("q") ?? "";
   const slug = encodeURIComponent(query.toLowerCase().replace(/[^a-z]+/g, "-"));
-  if (url.pathname === "/v1/search") {
+  if (url.pathname === "/api/") {
+    if (url.searchParams.get("key") !== "mock-key") return null;
     return {
-      photos: [
+      total: 1,
+      totalHits: 1,
+      hits: [
         {
-          url: "https://www.pexels.com/photo/e2e/",
-          photographer: "Jane Doe",
-          alt: `Stock photo of ${query}`,
-          src: { large2x: `https://images.e2e.test/stock/${slug}.jpg`, medium: `https://images.e2e.test/stock/${slug}-small.jpg` },
+          pageURL: "https://pixabay.com/photos/e2e/",
+          user: "Jane Doe",
+          tags: query,
+          largeImageURL: `https://images.e2e.test/stock/${slug}.jpg`,
+          webformatURL: `https://images.e2e.test/stock/${slug}-small.jpg`,
         },
       ],
     };
