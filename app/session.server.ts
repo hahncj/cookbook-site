@@ -5,6 +5,8 @@ export interface Viewer {
   userId: string;
   email: string;
   name: string;
+  /** Google profile picture URL (stored by Better Auth at sign-in), if any. */
+  image: string | null;
   isAdmin: boolean;
 }
 
@@ -16,6 +18,7 @@ export async function getViewer(request: Request, services: Services): Promise<V
     userId: session.user.id,
     email: session.user.email,
     name: session.user.name,
+    image: session.user.image ?? null,
     isAdmin: isAdminEmail(session.user.email, services.config.adminEmails),
   };
 }

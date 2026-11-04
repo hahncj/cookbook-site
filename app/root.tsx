@@ -3,7 +3,6 @@ import "@fontsource-variable/newsreader/opsz-italic.css";
 import "@fontsource-variable/public-sans/index.css";
 import "./styles/app.css";
 
-import { useState } from "react";
 import {
   Form,
   Link,
@@ -17,11 +16,11 @@ import {
   useRouteLoaderData,
   useSearchParams,
 } from "react-router";
-import { authClient } from "./auth-client";
+import { AccountMenu, SettingsGear, SignInButton } from "./components/account";
 import { PlusIcon, SearchIcon } from "./components/icons";
 import { servicesContext } from "./context";
 import { getViewer, type Viewer } from "./session.server";
-import { THEMES, readTheme, type ThemePreference } from "./theme";
+import { readTheme, type ThemePreference } from "./theme";
 import type { Route } from "./+types/root";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
@@ -104,92 +103,32 @@ function SiteHeader() {
           <SearchIcon />
           <input id="site-search" type="search" name="q" defaultValue={query} key={query} placeholder="Search titles, ingredients, notes" />
         </Form>
-        {viewer?.isAdmin && (
-          <div className="header-actions">
-            <Link to="/review" className="btn" aria-label={`Review, ${pendingReviews} waiting`}>
-              Review{pendingReviews > 0 && <span className="count-badge" aria-hidden="true">{pendingReviews}</span>}
-            </Link>
-            <Link to="/recipes/import" className="btn">
-              Import
-            </Link>
-            <Link to="/recipes/new" className="btn btn-primary">
-              <PlusIcon />
-              Add
-            </Link>
-          </div>
-        )}
+        <div className="header-end">
+          {viewer?.isAdmin && (
+            <div className="header-actions">
+              <Link to="/review" className="btn" aria-label={`Review, ${pendingReviews} waiting`}>
+                Review{pendingReviews > 0 && <span className="count-badge" aria-hidden="true">{pendingReviews}</span>}
+              </Link>
+              <Link to="/recipes/import" className="btn">
+                Import
+              </Link>
+              <Link to="/recipes/new" className="btn btn-primary">
+                <PlusIcon />
+                Add
+              </Link>
+            </div>
+          )}
+          {viewer ? (
+            <AccountMenu viewer={viewer} />
+          ) : (
+            <>
+              <SettingsGear />
+              <SignInButton />
+            </>
+          )}
+        </div>
       </div>
     </header>
-  );
-}
-
-function AppearanceControl() {
-  const { theme } = useRootData();
-  const location = useLocation();
-  return (
-    <Form method="post" action="/theme" className="appearance" preventScrollReset>
-      <input type="hidden" name="returnTo" value={location.pathname + location.search} />
-      <fieldset style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <legend className="visually-hidden">Appearance</legend>
-        <span aria-hidden="true" className="muted">
-          Appearance
-        </span>
-        <div className="segmented">
-          {THEMES.map((option) => (
-            <button key={option.value} type="submit" name="theme" value={option.value} aria-pressed={theme === option.value}>
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </fieldset>
-    </Form>
-  );
-}
-
-function SignOutButton() {
-  const [pending, setPending] = useState(false);
-  return (
-    <button
-      type="button"
-      className="btn"
-      disabled={pending}
-      onClick={async () => {
-        setPending(true);
-        await authClient.signOut();
-        window.location.href = "/";
-      }}
-    >
-      Sign out
-    </button>
-  );
-}
-
-function SiteFooter() {
-  const { viewer } = useRootData();
-  return (
-    <footer className="site-footer">
-      <div className="container site-footer-inner">
-        <AppearanceControl />
-        <nav aria-label="Account" className="footer-links">
-          {viewer?.isAdmin ? (
-            <>
-              <Link to="/settings">Settings</Link>
-              <Link to="/backup">Backup</Link>
-              <Link to="/deleted">Deleted recipes</Link>
-              <span className="muted">{viewer.email}</span>
-              <SignOutButton />
-            </>
-          ) : viewer ? (
-            <>
-              <span className="muted">Signed in as {viewer.email} (not an admin)</span>
-              <SignOutButton />
-            </>
-          ) : (
-            <Link to="/sign-in">Admin sign-in</Link>
-          )}
-        </nav>
-      </div>
-    </footer>
   );
 }
 
@@ -203,7 +142,6 @@ export default function App() {
       <main id="main" className="container site-main">
         <Outlet />
       </main>
-      <SiteFooter />
     </>
   );
 }

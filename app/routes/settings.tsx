@@ -1,8 +1,11 @@
-import { Form, useNavigation } from "react-router";
+import { Form, Link, useNavigation } from "react-router";
 import { createApiKey, listApiKeys, revokeApiKey } from "../../server/api-keys";
 import { disconnectTool, listConnectedTools } from "../../server/connections";
-import { requireAdminPage, requireAdminWrite } from "../admin.server";
+import { requireAdminWrite } from "../admin.server";
+import { AppearanceControl } from "../components/appearance";
 import { servicesContext } from "../context";
+import { useRootData } from "../root";
+import { getViewer } from "../session.server";
 import type { Route } from "./+types/settings";
 
 export function meta() {
@@ -11,13 +14,18 @@ export function meta() {
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const services = context.get(servicesContext);
-  await requireAdminPage(request, services);
+  // E3: open to everyone for Appearance. The admin sections load only for
+  // admins; their actions still refuse everyone else (401/403, AC-064).
+  const viewer = await getViewer(request, services);
+  if (!viewer?.isAdmin) return { admin: null };
   const [approvalRequired, tools, keys] = await Promise.all([
     services.submissions.approvalRequired(),
     listConnectedTools(services.db),
     listApiKeys(services.db),
   ]);
-  return { approvalRequired, tools, keys, mcpUrl: `${services.config.baseUrl}/mcp`, apiBase: `${services.config.baseUrl}/api/v1` };
+  return {
+    admin: { approvalRequired, tools, keys, mcpUrl: `${services.config.baseUrl}/mcp`, apiBase: `${services.config.baseUrl}/api/v1` },
+  };
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -48,13 +56,50 @@ const formatDate = (date: Date | string | null) =>
   date ? new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "never";
 
 export default function Settings({ loaderData, actionData }: Route.ComponentProps) {
-  const { approvalRequired, tools, keys, mcpUrl, apiBase } = loaderData;
+  const { theme } = useRootData();
+  return (
+    <div className="narrow" style={{ maxWidth: 760 }}>
+      <h1>Settings</h1>
+
+      <section className="card" aria-labelledby="appearance-heading">
+        <h2 id="appearance-heading" className="section-title">
+          Appearance
+        </h2>
+        <p className="muted">Saved on this device. System follows your phone or computer's light or dark setting.</p>
+        <div style={{ marginTop: 12 }}>
+          <AppearanceControl theme={theme} />
+        </div>
+      </section>
+
+      {loaderData.admin && <AdminSettings data={loaderData.admin} actionData={actionData} />}
+    </div>
+  );
+}
+
+type AdminData = NonNullable<Route.ComponentProps["loaderData"]["admin"]>;
+
+function AdminSettings({ data, actionData }: { data: AdminData; actionData: Route.ComponentProps["actionData"] }) {
+  const { approvalRequired, tools, keys, mcpUrl, apiBase } = data;
   const navigation = useNavigation();
   const busy = navigation.state === "submitting";
 
   return (
-    <div className="narrow" style={{ maxWidth: 760 }}>
-      <h1>Settings</h1>
+    <>
+      <section className="card" aria-labelledby="admin-tools-heading">
+        <h2 id="admin-tools-heading" className="section-title">
+          Admin tools
+        </h2>
+        <ul className="settings-links">
+          <li>
+            <Link to="/backup">Backup</Link>
+            <span className="muted">Download a copy of everything, or restore one into an empty cookbook.</span>
+          </li>
+          <li>
+            <Link to="/deleted">Deleted recipes</Link>
+            <span className="muted">Restore recipes you deleted.</span>
+          </li>
+        </ul>
+      </section>
 
       <section className="card" aria-labelledby="approval-heading">
         <h2 id="approval-heading" className="section-title">
@@ -173,6 +218,6 @@ export default function Settings({ loaderData, actionData }: Route.ComponentProp
         </Form>
         {actionData && "error" in actionData && actionData.error && <p className="error-text">{actionData.error}</p>}
       </section>
-    </div>
+    </>
   );
 }

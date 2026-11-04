@@ -8,7 +8,7 @@ test.describe("public visitors (AC-001, AC-027, AC-065)", () => {
     await expect(page.getByRole("heading", { level: 1, name: "All recipes" })).toBeVisible();
     await expect(page.getByRole("link", { name: /Gochujang Butter Noodles/ })).toBeVisible();
     await expect(page.getByRole("link", { name: "Add" })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "Admin sign-in" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Sign in", exact: true })).toBeVisible();
 
     await page.getByLabel("Search recipes").fill("udon");
     await page.getByLabel("Search recipes").press("Enter");
@@ -78,12 +78,16 @@ test.describe("themes (AC-071, AC-072)", () => {
   test("a chosen theme is remembered and rendered by the server (no flash)", async ({ page, request }) => {
     const { recipeId } = fixtures();
     await page.emulateMedia({ colorScheme: "light" });
+    // E3: Appearance lives in Settings, reached from the gear in the top bar.
     await page.goto(`/recipes/${recipeId}`);
+    await page.getByRole("link", { name: "Settings" }).click();
     await page.getByRole("button", { name: "Dark" }).click();
-    await expect(page).toHaveURL(new RegExp(`/recipes/${recipeId}$`));
+    await expect(page).toHaveURL(/\/settings$/);
     await expect(page.getByRole("button", { name: "Dark" })).toHaveAttribute("aria-pressed", "true");
     await expect(page.locator("body")).toHaveCSS("background-color", "rgb(23, 26, 33)");
     await expectAccessible(page);
+    await page.goto(`/recipes/${recipeId}`);
+    await expect(page.locator("body")).toHaveCSS("background-color", "rgb(23, 26, 33)");
 
     const cookies = await page.context().cookies();
     const theme = cookies.find((c) => c.name === "theme");

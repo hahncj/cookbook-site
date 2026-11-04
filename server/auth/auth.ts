@@ -47,6 +47,9 @@ export function createAuth({ config, db, fetchClientMetadata }: AuthDeps) {
       google: {
         clientId: config.google.clientId,
         clientSecret: config.google.clientSecret,
+        // Refresh name and profile picture from Google on every sign-in (E2),
+        // so the top-bar avatar stays current. Better Auth stores it as user.image.
+        overrideUserInfoOnSignIn: true,
       },
     },
     // The JWT plugin's session-to-JWT endpoint is not needed and is disabled
