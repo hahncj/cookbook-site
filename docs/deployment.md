@@ -14,7 +14,7 @@ How to deploy the cookbook to Cloudflare (primary host) and to the Node/Docker a
 | `ANTHROPIC_API_KEY` | secret, optional | Claude API key for in-app AI (imports, ingredient identification, "Check with AI"). Without it those features say they aren't set up; everything else works |
 | `ANTHROPIC_MODEL` | var, optional | Claude model for in-app AI. Default `claude-opus-5-5` |
 | `ANTHROPIC_BASE_URL` | var, optional | Only for an API gateway or proxy (the browser tests point it at a local mock). Leave unset |
-| `PEXELS_API_KEY` | secret, optional | Free stock photos for **Find a photo** (E1). Free key from pexels.com/api. Without it, stock search is off |
+| `PIXABAY_API_KEY` | secret, optional | Free stock photos for **Find a photo** (E1). Free key from pixabay.com/api/docs (shown when signed in). Without it, stock search is off |
 | `BRAVE_SEARCH_API_KEY` | secret, optional | Web image search for **Find a photo** (E1), results labeled "from the web". Brave Search API key (about $5/month of free credit; card required). Without it, web search is off |
 | `CLIENT_IP_HEADER` | var, optional | Trusted client-IP header for auth rate limiting. Default `cf-connecting-ip` on Cloudflare, `x-forwarded-for` on Node |
 | `DATABASE_PATH`, `MEDIA_DIR`, `PORT` | var, Node only | SQLite file, photo folder, and port (defaults in the Dockerfile) |
@@ -50,7 +50,7 @@ The Worker is named **`cookbook-site`** (the `name` in [wrangler.jsonc](../hosti
    npx wrangler secret put GOOGLE_CLIENT_SECRET --name cookbook-site
    openssl rand -base64 32 | npx wrangler secret put BETTER_AUTH_SECRET --name cookbook-site
    npx wrangler secret put ANTHROPIC_API_KEY --name cookbook-site   # optional: in-app AI (M5)
-   npx wrangler secret put PEXELS_API_KEY --name cookbook-site      # optional: stock photos for Find a photo (E1)
+   npx wrangler secret put PIXABAY_API_KEY --name cookbook-site     # optional: stock photos for Find a photo (E1)
    npx wrangler secret put BRAVE_SEARCH_API_KEY --name cookbook-site  # optional: web photos for Find a photo (E1)
    npx wrangler secret list --name cookbook-site
    ```

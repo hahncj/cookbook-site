@@ -39,9 +39,9 @@ test.describe("Find a photo (E1)", () => {
 
     await page.getByRole("button", { name: "Find a photo" }).click();
     const choices = page.getByRole("group", { name: "Photo choices" });
-    const stock = choices.getByRole("button", { name: /Stock photo of Tomato Soup/ });
+    const stock = choices.getByRole("button", { name: /Stock photo: Tomato Soup/ });
     await expect(stock).toBeVisible();
-    await expect(stock).toContainText("Photo: Jane Doe / Pexels");
+    await expect(stock).toContainText("Photo: Jane Doe / Pixabay");
     await expect(choices.getByRole("button", { name: "Use this photo" })).toBeDisabled();
 
     // Secondary source on request, labeled as from the web.
@@ -56,12 +56,12 @@ test.describe("Find a photo (E1)", () => {
     await choices.getByRole("button", { name: "Use this photo" }).click();
     await expect(page.getByRole("group", { name: "Photo choices" })).toHaveCount(0);
     await expect(page.locator(".photo-item")).toHaveCount(1);
-    await expect(page.locator(".photo-item .photo-credit")).toHaveText("Photo: Jane Doe / Pexels");
+    await expect(page.locator(".photo-item .photo-credit")).toHaveText("Photo: Jane Doe / Pixabay");
 
     await page.getByRole("button", { name: "Save" }).first().click();
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
     await expect(page.locator(".recipe-cover img")).toBeVisible();
-    await expect(page.locator(".recipe-cover .photo-credit")).toHaveText("Photo: Jane Doe / Pexels");
+    await expect(page.locator(".recipe-cover .photo-credit")).toHaveText("Photo: Jane Doe / Pixabay");
   });
 
   test("review: find a photo for a new recipe that has none, added on approval", async ({ page, context, request }) => {
@@ -79,10 +79,10 @@ test.describe("Find a photo (E1)", () => {
     // Match by heading: other cards may list this title as a possible duplicate.
     const card = page.locator(".review-card").filter({ has: page.getByRole("heading", { name: title }) });
     await card.getByRole("button", { name: "Find a photo" }).click();
-    await card.getByRole("button", { name: /Stock photo of Photoless Gazpacho/ }).click();
+    await card.getByRole("button", { name: /Stock photo: Photoless Gazpacho/ }).click();
     await card.getByRole("button", { name: "Use this photo" }).click();
     await expect(card.getByText("Added when you approve.")).toBeVisible();
-    await expect(card.locator(".photo-credit")).toHaveText("Photo: Jane Doe / Pexels");
+    await expect(card.locator(".photo-credit")).toHaveText("Photo: Jane Doe / Pixabay");
     await expectAccessible(page);
     await expectNoHorizontalScroll(page);
 
@@ -90,6 +90,6 @@ test.describe("Find a photo (E1)", () => {
     await expect(card).toHaveCount(0);
     await page.getByRole("link", { name: title }).first().click();
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
-    await expect(page.locator(".recipe-cover .photo-credit")).toHaveText("Photo: Jane Doe / Pexels");
+    await expect(page.locator(".recipe-cover .photo-credit")).toHaveText("Photo: Jane Doe / Pixabay");
   });
 });

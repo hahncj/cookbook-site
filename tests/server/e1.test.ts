@@ -14,7 +14,7 @@ import { loadConfig } from "../../server/config";
 import { createPhotoFinder, pageImageUrls, type PhotoCandidate, type PhotoSearchProvider } from "../../server/core/photo-finder";
 import { validateEntry } from "../../server/core/recipes";
 import { createImageFetcher, type ImageFetcher } from "../../server/importers/fetch-page";
-import { createBraveImageSearch, createPexelsSearch } from "../../server/importers/photo-search";
+import { createBraveImageSearch, createPixabaySearch } from "../../server/importers/photo-search";
 import { jpegWithMetadata } from "../helpers/images";
 import { MemoryMediaStore } from "../helpers/memory-media";
 import { ADMIN_EMAIL, BASE_URL, createTestServices, sessionCookieFor } from "../helpers/services";
@@ -36,7 +36,7 @@ const candidate = (source: PhotoCandidate["source"], n: number): PhotoCandidate 
   imageUrl: `https://img.example.com/${source}-${n}.jpg`,
   previewUrl: `https://img.example.com/${source}-${n}-small.jpg`,
   source,
-  credit: source === "stock" ? `Photo: Jane Doe ${n} / Pexels` : `Photo: site${n}.example.com`,
+  credit: source === "stock" ? `Photo: Jane Doe ${n} / Pixabay` : `Photo: site${n}.example.com`,
   pageUrl: null,
   description: "",
 });
@@ -128,30 +128,42 @@ describe("source order (confirmed 2026-11-04)", () => {
 });
 
 describe("providers (fake HTTP, never the real APIs)", () => {
-  it("Pexels: sends the key, builds a credit with the photographer", async () => {
-    const seen: { url: string; headers: Headers }[] = [];
-    const fetchImpl = (async (url: string, init?: RequestInit) => {
-      seen.push({ url, headers: new Headers(init?.headers) });
+  it("Pixabay: sends the key, safe search on, builds a credit with the photographer", async () => {
+    const seen: string[] = [];
+    const fetchImpl = (async (url: string) => {
+      seen.push(url);
       return Response.json({
-        photos: [
-          { url: "https://www.pexels.com/photo/1/", photographer: "Jane Doe", alt: "Soup in a bowl", src: { large2x: "https://images.pexels.com/1-l.jpg", medium: "https://images.pexels.com/1-m.jpg" } },
-          { photographer: "No Source", src: {} },
+        total: 2,
+        totalHits: 2,
+        hits: [
+          {
+            pageURL: "https://pixabay.com/photos/soup-1/",
+            user: "Jane Doe",
+            tags: "soup, tomato, bowl",
+            largeImageURL: "https://pixabay.com/get/1_1280.jpg",
+            webformatURL: "https://pixabay.com/get/1_640.jpg",
+          },
+          { user: "No Source" },
         ],
       });
     }) as typeof fetch;
-    const results = await createPexelsSearch({ apiKey: "pk", fetchImpl }).search("tomato soup", 6);
-    expect(seen[0]!.url).toContain("https://api.pexels.com/v1/search?query=tomato+soup&per_page=6");
-    expect(seen[0]!.headers.get("authorization")).toBe("pk");
+    const results = await createPixabaySearch({ apiKey: "pk", fetchImpl }).search("tomato soup", 6);
+    const url = new URL(seen[0]!);
+    expect(`${url.origin}${url.pathname}`).toBe("https://pixabay.com/api/");
+    expect(Object.fromEntries(url.searchParams)).toMatchObject({ key: "pk", q: "tomato soup", image_type: "photo", safesearch: "true", per_page: "6" });
     expect(results).toEqual([
       {
-        imageUrl: "https://images.pexels.com/1-l.jpg",
-        previewUrl: "https://images.pexels.com/1-m.jpg",
+        imageUrl: "https://pixabay.com/get/1_1280.jpg",
+        previewUrl: "https://pixabay.com/get/1_640.jpg",
         source: "stock",
-        credit: "Photo: Jane Doe / Pexels",
-        pageUrl: "https://www.pexels.com/photo/1/",
-        description: "Soup in a bowl",
+        credit: "Photo: Jane Doe / Pixabay",
+        pageUrl: "https://pixabay.com/photos/soup-1/",
+        description: "Stock photo: soup, tomato, bowl",
       },
     ]);
+    // Pixabay needs at least 3 per page.
+    await createPixabaySearch({ apiKey: "pk", fetchImpl }).search("soup", 1);
+    expect(new URL(seen[1]!).searchParams.get("per_page")).toBe("3");
   });
 
   it("Brave: sends the key with safe search, credits the site", async () => {
@@ -172,13 +184,13 @@ describe("providers (fake HTTP, never the real APIs)", () => {
 
   it("a provider error throws (the finder moves on)", async () => {
     const fetchImpl = (async () => new Response("no", { status: 429 })) as unknown as typeof fetch;
-    await expect(createPexelsSearch({ apiKey: "pk", fetchImpl }).search("x", 1)).rejects.toThrow();
+    await expect(createPixabaySearch({ apiKey: "pk", fetchImpl }).search("x", 1)).rejects.toThrow();
   });
 
   it("each source is off unless its key is set", () => {
     const base = { PUBLIC_BASE_URL: BASE_URL, ADMIN_EMAILS: ADMIN_EMAIL, BETTER_AUTH_SECRET: "x".repeat(32), GOOGLE_CLIENT_ID: "a", GOOGLE_CLIENT_SECRET: "b" };
-    expect(loadConfig(base, "node").photoSearch).toEqual({ pexels: null, brave: null });
-    expect(loadConfig({ ...base, PEXELS_API_KEY: " pk ", BRAVE_SEARCH_API_KEY: "" }, "node").photoSearch).toEqual({ pexels: { apiKey: "pk", baseUrl: null }, brave: null });
+    expect(loadConfig(base, "node").photoSearch).toEqual({ pixabay: null, brave: null });
+    expect(loadConfig({ ...base, PIXABAY_API_KEY: " pk ", BRAVE_SEARCH_API_KEY: "" }, "node").photoSearch).toEqual({ pixabay: { apiKey: "pk", baseUrl: null }, brave: null });
   });
 });
 
@@ -305,24 +317,24 @@ async function recipeWithPhotos(photos: { id: string; caption: string }[]) {
 
 describe("photo credit", () => {
   it("is saved with a found photo and shown with the recipe; uploads have none", async () => {
-    const found = await uploadWithCredit("  Photo: Jane Doe   / Pexels ");
+    const found = await uploadWithCredit("  Photo: Jane Doe   / Pixabay ");
     const uploaded = await uploadWithCredit();
-    expect(found.credit).toBe("Photo: Jane Doe / Pexels");
+    expect(found.credit).toBe("Photo: Jane Doe / Pixabay");
     expect(uploaded.credit).toBeNull();
     const id = await recipeWithPhotos([
       { id: found.id, caption: "" },
       { id: uploaded.id, caption: "" },
     ]);
     const page = (await recipeLoader(args(new Request(`${BASE_URL}/recipes/${id}`), { id }))) as { credits: Record<string, string> };
-    expect(page.credits).toEqual({ [found.id]: "Photo: Jane Doe / Pexels" });
+    expect(page.credits).toEqual({ [found.id]: "Photo: Jane Doe / Pixabay" });
     const edit = (await editLoader(args(new Request(`${BASE_URL}/recipes/${id}/edit`, { headers: { Cookie: admin } }), { id }))) as {
       values: { photos: { id: string; credit: string | null }[] };
     };
-    expect(edit.values.photos.map((p) => p.credit)).toEqual(["Photo: Jane Doe / Pexels", null]);
+    expect(edit.values.photos.map((p) => p.credit)).toEqual(["Photo: Jane Doe / Pixabay", null]);
   });
 
   it("is included in backups and comes back on restore", async () => {
-    const found = await uploadWithCredit("Photo: Jane Doe / Pexels");
+    const found = await uploadWithCredit("Photo: Jane Doe / Pixabay");
     const uploaded = await uploadWithCredit();
     await recipeWithPhotos([
       { id: found.id, caption: "" },
@@ -330,18 +342,18 @@ describe("photo credit", () => {
     ]);
     const backup = JSON.parse(JSON.stringify(await exportBackupData(services.db, new Date())));
     expect(backup.tables.photos).toEqual(
-      expect.arrayContaining([expect.objectContaining({ id: found.id, credit: "Photo: Jane Doe / Pexels" }), expect.objectContaining({ id: uploaded.id, credit: null })]),
+      expect.arrayContaining([expect.objectContaining({ id: found.id, credit: "Photo: Jane Doe / Pixabay" }), expect.objectContaining({ id: uploaded.id, credit: null })]),
     );
 
     const fresh = createTestServices({ media: new MemoryMediaStore() });
     for (const table of TABLE_ORDER) expect(await importRows(fresh.db, table, backup.tables[table])).toMatchObject({ ok: true });
     const restored = await exportBackupData(fresh.db, new Date());
-    expect(restored.tables.photos.find((p) => p.id === found.id)).toMatchObject({ credit: "Photo: Jane Doe / Pexels" });
+    expect(restored.tables.photos.find((p) => p.id === found.id)).toMatchObject({ credit: "Photo: Jane Doe / Pixabay" });
     expect(restored.tables.photos.find((p) => p.id === uploaded.id)).toMatchObject({ credit: null });
   });
 
   it("older backups without a credit field still restore", async () => {
-    const found = await uploadWithCredit("Photo: Jane Doe / Pexels");
+    const found = await uploadWithCredit("Photo: Jane Doe / Pixabay");
     await recipeWithPhotos([{ id: found.id, caption: "" }]);
     const backup = JSON.parse(JSON.stringify(await exportBackupData(services.db, new Date())));
     for (const row of backup.tables.photos) delete row.credit;
@@ -357,7 +369,7 @@ describe("Review: a found photo is added on approval", () => {
   it("attaches the chosen photo to a new recipe that had none", async () => {
     const submitted = await services.submissions.submitNew(submitter, { recipe: { title: "Tomato Soup" }, idempotencyKey: "photo-0001" });
     const submissionId = (submitted as { submissionId: string }).submissionId;
-    const photo = await uploadWithCredit("Photo: Jane Doe / Pexels");
+    const photo = await uploadWithCredit("Photo: Jane Doe / Pixabay");
     await reviewAction(args(post("/review", { id: submissionId, intent: "approve", photoId: photo.id }, admin)));
     const applied = await services.submissions.get(submissionId);
     expect(applied?.status).toBe("applied");
