@@ -56,8 +56,10 @@ export interface ProfileInput {
 export interface DiscoverInput {
   /** What the owner typed in the search bar with AI mode on. */
   request: string;
-  /** The preference profile, with who said it. */
-  preferences: { statement: string; confirmed: boolean }[];
+  /** "write": Claude writes recipes (one quick call). "web": find real pages with web search. */
+  source: "write" | "web";
+  /** The preference profile, with who said it; null when the owner turned preferences off for this search. */
+  preferences: { statement: string; confirmed: boolean }[] | null;
   /** Rejected inferences: don't assume these. */
   rejected: string[];
   /** Titles of favorite and often-made recipes, as taste hints. */
@@ -131,7 +133,7 @@ export interface RecipeAi {
   compareRecipes(a: string, b: string): Promise<AiResult<RecipeComparison>>;
   /** Infers likely preferences from the catalog (M7, on request only). */
   inferPreferences(input: ProfileInput): Promise<AiResult<{ preferences: InferredPreference[]; note: string | null }>>;
-  /** Finds new recipes on the web and writes new ones, guided by the preference profile (M7). */
+  /** Writes new recipes, or finds new ones on the web, optionally guided by the preference profile (M7). */
   discover(input: DiscoverInput): Promise<AiResult<DiscoveryDraft>>;
   /** Swaps for a missing ingredient in a saved recipe (D20). */
   suggestSubstitutes(input: {

@@ -1,6 +1,8 @@
-// AI mode in the search bar (M7, workflow 5, AC-015/034): finds NEW recipes,
-// not ones already in the cookbook. The preference profile and the owner's
-// favorites add context to the request. Pure logic over the AI port. This
+// AI mode in the search bar (M7, workflow 5, AC-015/034): NEW recipes, not
+// ones already in the cookbook, from one of two sources the owner picks:
+// "Write with AI" (Claude writes them; one quick call) or "Find on the web"
+// (real pages via web search). The preference profile and favorites add
+// context unless the owner turns preferences off for that search. Pure logic over the AI port. This
 // module keeps it honest:
 // - A web recipe must link to a page Anthropic's web tools actually returned
 //   in this request (no invented sources), and says whether the page was read
@@ -16,6 +18,7 @@ import { LIMITS } from "./recipes";
 
 export const REQUEST_MAX = 500;
 export const MAX_WEB = 4;
+export type DiscoverSource = "write" | "web";
 export const MAX_WRITTEN = 3;
 const REASON_MAX = 400;
 const MAX_TITLES = 400;
@@ -49,6 +52,8 @@ export interface WrittenDiscovery {
 
 export interface Discoveries {
   request: string;
+  source: DiscoverSource;
+  usedPreferences: boolean;
   web: WebDiscovery[];
   written: WrittenDiscovery[];
   note: string | null;
@@ -88,12 +93,17 @@ const orNull = (value: string, max: number) => tidy(value, max) || null;
 export function createDiscovery({ ai, digestSources, signals, profile, now }: DiscoveryDeps) {
   return {
     /** Admin-only: the caller checks access before calling (AC-066/067). */
-    async discover(input: { request: unknown }): Promise<DiscoverOutcome> {
+    async discover(input: { request: unknown; source: DiscoverSource; usePreferences: boolean }): Promise<DiscoverOutcome> {
       const request = typeof input.request === "string" ? tidy(input.request, REQUEST_MAX + 1) : "";
       if (!request) return { ok: false, reason: "invalid", message: "Describe what you'd like to cook first." };
       if (request.length > REQUEST_MAX) return { ok: false, reason: "invalid", message: `Keep the request under ${REQUEST_MAX} characters.` };
 
-      const [sources, markerSignals, prefs] = await Promise.all([digestSources(), signals(), profile()]);
+      const { source, usePreferences } = input;
+      const [sources, markerSignals, prefs] = await Promise.all([
+        digestSources(),
+        usePreferences ? signals() : Promise.resolve([]),
+        usePreferences ? profile() : Promise.resolve(null),
+      ]);
       const titleById = new Map(sources.map((s) => [s.id, s.title]));
       const favorites = markerSignals
         .filter((s) => (s.favorite || s.madeCount >= 2) && titleById.has(s.recipeId))
@@ -103,8 +113,9 @@ export function createDiscovery({ ai, digestSources, signals, profile, now }: Di
 
       const result = await ai.discover({
         request,
-        preferences: prefs.preferences,
-        rejected: prefs.rejected,
+        source,
+        preferences: prefs ? prefs.preferences : null,
+        rejected: prefs ? prefs.rejected : [],
         favorites,
         cookbookTitles: sources.slice(0, MAX_TITLES).map((s) => s.title),
         today: now().toISOString().slice(0, 10),
@@ -127,7 +138,7 @@ export function createDiscovery({ ai, digestSources, signals, profile, now }: Di
       }
       const web: WebDiscovery[] = [];
       let droppedUnverified = 0;
-      for (const w of result.value.web) {
+      for (const w of source === "web" ? result.value.web : []) {
         const key = normalizeUrl(w.url);
         const found = key ? seen.get(key) : undefined;
         if (!key || !found) {
@@ -148,7 +159,7 @@ export function createDiscovery({ ai, digestSources, signals, profile, now }: Di
       }
 
       const written: WrittenDiscovery[] = [];
-      for (const r of result.value.written) {
+      for (const r of source === "write" ? result.value.written : []) {
         const title = tidy(r.title, LIMITS.title);
         const ingredients = r.ingredients
           .map((i) => ({ quantity: tidy(i.quantity, LIMITS.shortText), item: tidy(i.item, LIMITS.shortText) }))
@@ -171,7 +182,7 @@ export function createDiscovery({ ai, digestSources, signals, profile, now }: Di
         });
       }
 
-      return { ok: true, value: { request, web, written, note: result.value.note ? tidy(result.value.note, 600) : null, droppedUnverified } };
+      return { ok: true, value: { request, source, usedPreferences: usePreferences, web, written, note: result.value.note ? tidy(result.value.note, 600) : null, droppedUnverified } };
     },
   };
 }
