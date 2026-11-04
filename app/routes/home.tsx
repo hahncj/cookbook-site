@@ -7,7 +7,7 @@ import type { Route } from "./+types/home";
 
 export function meta({ loaderData: data }: Route.MetaArgs) {
   const q = data?.filters.q;
-  return [{ title: q ? `“${q}” · Cookbook` : "Cookbook" }];
+  return [{ title: q ? `“${q}” · 540 Kitchen` : "540 Kitchen" }];
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {

@@ -6,7 +6,7 @@ import { servicesContext } from "../context";
 import type { Route } from "./+types/settings";
 
 export function meta() {
-  return [{ title: "Settings · Cookbook" }];
+  return [{ title: "Settings · 540 Kitchen" }];
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {

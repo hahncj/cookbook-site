@@ -6,7 +6,7 @@ import { entryToFormValues, saveEntryAction } from "../entry-form.server";
 import type { Route } from "./+types/recipe-edit";
 
 export function meta({ loaderData: loaded }: Route.MetaArgs) {
-  return [{ title: loaded ? `Edit ${loaded.values.title} · Cookbook` : "Edit · Cookbook" }];
+  return [{ title: loaded ? `Edit ${loaded.values.title} · 540 Kitchen` : "Edit · 540 Kitchen" }];
 }
 
 export async function loader({ request, params, context }: Route.LoaderArgs) {

@@ -9,7 +9,7 @@ import { getViewer } from "../session.server";
 import type { Route } from "./+types/consent";
 
 export function meta() {
-  return [{ title: "Connect an AI tool · Cookbook" }];
+  return [{ title: "Connect an AI tool · 540 Kitchen" }];
 }
 
 function hostOf(value: unknown): string | null {

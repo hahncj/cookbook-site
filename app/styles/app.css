@@ -216,12 +216,33 @@ button {
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 30px;
+  font-size: 28px;
   color: var(--text);
   text-decoration: none;
   margin-right: auto;
+}
+
+.brand-logo {
+  display: block;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+}
+
+.brand-name {
+  white-space: nowrap;
+}
+
+/* The logo already carries the name; drop the words where space is tight. */
+@media (max-width: 420px) {
+  .brand-name {
+    display: none;
+  }
 }
 
 .brand:hover {

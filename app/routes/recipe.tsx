@@ -36,8 +36,8 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 }
 
 export function meta({ loaderData: loaded }: Route.MetaArgs) {
-  if (!loaded) return [{ title: "Not found · Cookbook" }];
-  const tags = [{ title: `${loaded.entry.title} · Cookbook` }];
+  if (!loaded) return [{ title: "Not found · 540 Kitchen" }];
+  const tags = [{ title: `${loaded.entry.title} · 540 Kitchen` }];
   if (loaded.entry.description) tags.push({ name: "description", content: loaded.entry.description } as never);
   return tags;
 }
@@ -74,7 +74,7 @@ export default function RecipePage({ loaderData, actionData }: Route.ComponentPr
       <div className="recipe-top">
         <Link to="/" className="btn">
           <BackIcon />
-          Cookbook
+          540 Kitchen
         </Link>
         {viewer?.isAdmin && (
           <Link to={`/recipes/${entry.id}/edit`} className="btn">

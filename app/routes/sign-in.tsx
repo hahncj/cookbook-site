@@ -4,7 +4,7 @@ import { authClient } from "../auth-client";
 import { safeReturnPath } from "../theme";
 
 export function meta() {
-  return [{ title: "Sign in · Cookbook" }];
+  return [{ title: "Sign in · 540 Kitchen" }];
 }
 
 export default function SignIn() {
