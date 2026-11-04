@@ -38,6 +38,7 @@
     "better-call": "1.4.4",
     "better-sqlite3": "13.0.3",
     "drizzle-orm": "0.45.4",
+    "fflate": "0.8.3",
     "isbot": "^5",
     "react": "19.3.1",
     "react-dom": "19.3.1",

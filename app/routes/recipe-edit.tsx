@@ -38,6 +38,7 @@ export default function EditRecipe({ loaderData, actionData }: Route.ComponentPr
       <EntryForm
         key={actionData ? JSON.stringify(actionData.values) : "initial"}
         heading={`Edit ${loaderData.values.kind === "idea" ? "idea" : "recipe"}`}
+        editing
         cancelTo={`/recipes/${loaderData.id}`}
         values={actionData?.values ?? loaderData.values}
         errors={actionData?.errors}

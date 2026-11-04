@@ -193,12 +193,55 @@ Deferred by plan: photos (M3), version history (M3), markers and serving scaling
 
 **Done when:** AC-006, 041, 044, 050–053, 058, 061 pass, including a restore into a fresh instance; backup/restore procedure documented; no request exceeds free-plan CPU limits.
 
+#### M3 status (2026-11-03, branch `feature/m3-photos-history-backup`)
+
+Verified by automated tests (`npm run check`: 89 unit/integration tests; `npm run test:e2e`: 58 browser checks in Chromium and WebKit at 390, 768 and 1280 px, plus the backup test on desktop):
+
+| Check | How it was verified |
+| --- | --- |
+| AC-006 | Admin uploads a photo in the editor; it shows on the recipe page, in the catalog thumbnail, and to a separate signed-out browser |
+| AC-043 (partial) | The editor has a "Take photo" input that opens the phone camera (`capture="environment"`) and a separate "Upload photos" input that works without a camera. **Real-device camera checks on iPhone Safari, Chrome on iPhone, the Home Screen app and Android remain for the owner's device checklist (M8).** |
+| AC-044 | Adding a photo triggers no AI; the editor says so |
+| Location data | A JPEG carrying GPS/EXIF uploaded through the browser is stored with no EXIF or GPS; the server also strips EXIF/XMP/IPTC/comments from JPEG, PNG and WebP itself (unit-tested with handcrafted files) |
+| AC-050, AC-051 | Every save creates a full version with author, time and optional "what changed" note; dated experiment notes on the recipe page (they don't create versions) |
+| AC-052 | Deleted recipes restore (M2); an unwanted edit is reversed by restoring the earlier version |
+| AC-058 | Restoring creates a new version, keeps every version in between, and refuses with a conflict if the recipe changed since the page loaded |
+| AC-041, AC-053, AC-061 | A downloaded backup zip from one running instance restores into a second, empty instance: same IDs, history, notes, deleted entries, tags, collections, photos and search; restore refuses on a non-empty cookbook and resumes safely if interrupted |
+| AC-048 | A file the browser can't read shows a clear message; the form keeps its content |
+
+Also verified against the Cloudflare build in local workerd with D1 and R2: the new migrations and history backfill, photo upload and serving (unsaved photos admin-only, saved photos public, GPS stripped), versions inside D1 batches, a stale edit adding no version, restore, backup export, and restore refusal on a non-empty cookbook.
+
+Procedure and limits: [backup-restore.md](backup-restore.md). Photos are resized in the browser and the backup zip is built in the browser, so no request does image or archive work on the server. The free-plan CPU limit was already exceeded by normal pages (D16); photo serving adds one small database lookup per image.
+
+Production after merge: `npm run deploy:ci` applies migrations 0003 and 0004 automatically (existing recipes get a first history version).
+
 ### M4 — External tools and approval
 
 - Change-submission engine: queue, approval toggle (default on), proposed-vs-current diff, approve/reject, stale-revision conflicts, retry identifiers.
 - HTTP API and MCP tools over the same core operations; connector setup docs; credential revocation.
 
 **Done when:** AC-011–014, 024, 025, 029–032, 059, 070 pass, verified with a non-Claude test client and live from ChatGPT and Claude.ai.
+
+#### M4 status (2026-11-03, branch `feature/m4-connector-submissions`)
+
+Verified by automated tests (`npm run check`: 116 unit/integration tests; `npm run test:e2e`: 67 browser checks). Every submission rule runs twice: over MCP with a real OAuth connector token and over the HTTP API with an API key.
+
+| Check | How it was verified |
+| --- | --- |
+| AC-011 | New recipes and partial updates submitted over MCP and over the HTTP API; reads return the current revision for round-tripping |
+| AC-012, AC-070 | With approval on (default), nothing changes in the catalog, search or public pages until approval; the waiting count is shown to admins only |
+| AC-013, AC-059 | Approve applies the reviewed change (history shows "Changed by an AI tool" with the tool's note); reject changes nothing and records no version |
+| AC-014, AC-032 | Approval off saves valid submissions immediately (HTTP 201); waiting items stay waiting; turning it back on queues again |
+| AC-024 | Browser test submits with a plain HTTP client using an API key created on the Settings page, then approves in Review |
+| AC-025 | The same scenarios pass identically over MCP and HTTP |
+| AC-029 | No tool or API route can approve or change settings; tool credentials never count as an admin sign-in; tools only see their own submissions |
+| AC-030 | Retrying with the same idempotency key returns the original result; one recipe |
+| AC-031 | An update against an old revision returns a conflict with the current revision and stores nothing; an update approved after the owner edited becomes a conflict, not an overwrite |
+| Revocation | Disconnected apps' tokens, revoked API keys and keys belonging to former admins are refused |
+
+Also verified against the Cloudflare build in local workerd with D1: migration 0005, MCP tool list and submission, idempotent retry, HTTP submission, pending not public, approval from Review, applied status, stale-update 409, API key revocation.
+
+**Remaining for the owner after deploying:** reconnect or refresh the Claude.ai and ChatGPT connectors so they load the new tools, then ask each to save a recipe from a conversation and approve it in Review (the "live from ChatGPT and Claude.ai" part of the completion criteria).
 
 ### M5 — In-app AI
 

@@ -19,6 +19,8 @@ export interface EntryFormValues {
   tags: string;
   collectionIds: string[];
   newCollection: string;
+  photos: { id: string; caption: string }[];
+  changeNote: string;
   revision: number;
 }
 
@@ -46,6 +48,8 @@ export function readEntryForm(form: FormData): EntryFormValues {
     tags: text(form, "tags"),
     collectionIds: form.getAll("collectionIds").map(String),
     newCollection: text(form, "newCollection"),
+    photos: form.getAll("photoId").map((id, i) => ({ id: String(id), caption: String(form.getAll("photoCaption")[i] ?? "") })),
+    changeNote: text(form, "changeNote"),
     revision: Number(text(form, "revision")) || 0,
   };
 }
@@ -66,6 +70,8 @@ export function entryToFormValues(entry: Entry): EntryFormValues {
     tags: entry.tags.map((tag) => tag.name).join(", "),
     collectionIds: entry.collections.map((collection) => collection.id),
     newCollection: "",
+    photos: entry.photos,
+    changeNote: "",
     revision: entry.revision,
   };
 }
@@ -86,6 +92,8 @@ export function emptyFormValues(kind: "recipe" | "idea" = "recipe"): EntryFormVa
     tags: "",
     collectionIds: [],
     newCollection: "",
+    photos: [],
+    changeNote: "",
     revision: 0,
   };
 }
@@ -122,6 +130,7 @@ export async function saveEntryAction(request: Request, services: Services, targ
     sourceName: values.sourceName,
     tags: parseTagList(values.tags),
     collectionIds,
+    photos: values.photos,
   });
   const echo = { ...values, collectionIds, newCollection: errors.collectionIds ? values.newCollection : "" };
   if (!result.ok || Object.keys(errors).length > 0) {
@@ -129,9 +138,10 @@ export async function saveEntryAction(request: Request, services: Services, targ
   }
 
   const actor = { userId: admin.userId };
+  const changeNote = values.changeNote;
   const saved = target
-    ? await services.catalog.update(target.id, values.revision, result.value, actor)
-    : await services.catalog.create(result.value, actor);
+    ? await services.catalog.update(target.id, values.revision, result.value, actor, { changeNote })
+    : await services.catalog.create(result.value, actor, { changeNote });
 
   if (!saved.ok) {
     const message =

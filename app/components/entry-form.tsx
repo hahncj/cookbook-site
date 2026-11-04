@@ -4,9 +4,12 @@ import type { CountedRef } from "../../server/core/catalog";
 import type { FieldErrors } from "../../server/core/recipes";
 import type { EntryFormValues } from "../entry-form.server";
 import { CloseIcon, PlusIcon } from "./icons";
+import { PhotoField } from "./photo-field";
 
 interface Props {
   heading: string;
+  /** Editing an existing entry (shows the "what changed" note). */
+  editing?: boolean;
   cancelTo: string;
   values: EntryFormValues;
   errors?: FieldErrors;
@@ -24,7 +27,7 @@ function FieldError({ id, message }: { id: string; message?: string }) {
   );
 }
 
-export function EntryForm({ heading, cancelTo, values, errors = {}, collections }: Props) {
+export function EntryForm({ heading, editing = false, cancelTo, values, errors = {}, collections }: Props) {
   const navigation = useNavigation();
   const saving = navigation.state === "submitting" && navigation.formMethod?.toLowerCase() === "post";
   const [kind, setKind] = useState(values.kind);
@@ -34,6 +37,7 @@ export function EntryForm({ heading, cancelTo, values, errors = {}, collections 
     return [...filled, ...Array.from({ length: blanks }, (_, i) => ({ key: filled.length + i, quantity: "", item: "" }))];
   });
   const [nextKey, setNextKey] = useState(rows.length);
+  const [uploading, setUploading] = useState(false);
 
   const invalid = (field: keyof FieldErrors) => (errors[field] ? { "aria-invalid": true as const, "aria-describedby": `${field}-error` } : {});
 
@@ -45,8 +49,8 @@ export function EntryForm({ heading, cancelTo, values, errors = {}, collections 
           <Link to={cancelTo} className="btn">
             Cancel
           </Link>
-          <button type="submit" className="btn btn-primary" disabled={saving}>
-            {saving ? "Saving…" : "Save"}
+          <button type="submit" className="btn btn-primary" disabled={saving || uploading}>
+            {saving ? "Saving…" : uploading ? "Adding photos…" : "Save"}
           </button>
         </div>
       </div>
@@ -94,6 +98,9 @@ export function EntryForm({ heading, cancelTo, values, errors = {}, collections 
         <textarea id="description" name="description" rows={2} defaultValue={values.description} {...invalid("description")} />
         <FieldError id="description-error" message={errors.description} />
       </div>
+
+      <PhotoField initial={values.photos} onBusyChange={setUploading} />
+      <FieldError id="photos-error" message={errors.photos} />
 
       <div className="grid-3">
         <div className="field">
@@ -212,12 +219,21 @@ export function EntryForm({ heading, cancelTo, values, errors = {}, collections 
         </div>
       </div>
 
+      {editing && (
+        <div className="field change-note">
+          <label htmlFor="changeNote">
+            What changed? <span className="optional">(saved with this version)</span>
+          </label>
+          <input id="changeNote" name="changeNote" defaultValue={values.changeNote} maxLength={500} placeholder="e.g. Less honey; added an egg" />
+        </div>
+      )}
+
       <div className="form-actions">
         <Link to={cancelTo} className="btn">
           Cancel
         </Link>
-        <button type="submit" className="btn btn-primary" disabled={saving}>
-          {saving ? "Saving…" : "Save"}
+        <button type="submit" className="btn btn-primary" disabled={saving || uploading}>
+          {saving ? "Saving…" : uploading ? "Adding photos…" : "Save"}
         </button>
       </div>
     </Form>

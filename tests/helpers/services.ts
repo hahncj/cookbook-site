@@ -5,11 +5,12 @@ import { createServices, handleRequest, type PageRenderer, type Services } from 
 import { fetchClientMetadataViaFetch } from "../../server/auth/cimd-fetch";
 import { loadConfig } from "../../server/config";
 import * as schema from "../../server/db/schema";
+import type { MediaStore } from "../../server/adapters/media";
 
 export const BASE_URL = "http://localhost:5173";
 export const ADMIN_EMAIL = "admin@example.com";
 
-export function createTestServices(): Services {
+export function createTestServices(options: { media?: MediaStore | null } = {}): Services {
   const sqlite = new Database(":memory:");
   const db = drizzle(sqlite, { schema });
   migrate(db, { migrationsFolder: "db/migrations" });
@@ -23,7 +24,7 @@ export function createTestServices(): Services {
     },
     "node",
   );
-  return createServices({ config, db, media: null, fetchClientMetadata: fetchClientMetadataViaFetch });
+  return createServices({ config, db, media: options.media ?? null, fetchClientMetadata: fetchClientMetadataViaFetch });
 }
 
 /**
@@ -41,4 +42,15 @@ export const pageStub: PageRenderer = async () => new Response("<html>page</html
 
 export function request(services: Services, path: string, init?: RequestInit) {
   return handleRequest(new Request(`${BASE_URL}${path}`, init), services, pageStub);
+}
+
+/** A signed session cookie for a new user with this email (stands in for Google sign-in). */
+export async function sessionCookieFor(services: Services, email: string) {
+  const { serializeSignedCookie } = await import("better-call");
+  const ctx = await services.auth.$context;
+  const id = crypto.randomUUID();
+  const now = new Date();
+  await services.db.insert(schema.user).values({ id, email, name: "Someone", emailVerified: true, createdAt: now, updatedAt: now });
+  const session = await ctx.internalAdapter.createSession(id);
+  return (await serializeSignedCookie("better-auth.session_token", session.token, ctx.secret)).split(";")[0]!;
 }

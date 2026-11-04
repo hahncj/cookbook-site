@@ -5,9 +5,14 @@ import type { AppConfig } from "./config";
 import type { Auth } from "./auth/auth";
 import { AUTH_BASE_PATH, MCP_PATH, createAuth } from "./auth/auth";
 import type { ClientMetadataResourceFetch } from "@better-auth/oauth-provider";
-import { createMcpEndpoint } from "./mcp/endpoint";
+import { handleMcp } from "./mcp/endpoint";
+import { handleApiV1 } from "./api-v1";
+import { createSubmissionsRepository } from "./adapters/submissions-repo";
+import { createSubmissions, type Submissions } from "./core/submissions";
 import { createCatalogRepository } from "./adapters/catalog-repo";
 import { createCatalog, type Catalog } from "./core/catalog";
+import { isAdminEmail } from "./core/admin";
+import { servePhoto } from "./photos";
 
 /** Everything a request handler may use. Built per request by the host adapter. */
 export interface Services {
@@ -17,6 +22,7 @@ export interface Services {
   /** Absent when the host has no media storage configured yet. */
   media: MediaStore | null;
   catalog: Catalog;
+  submissions: Submissions;
 }
 
 export interface HostDeps {
@@ -28,12 +34,15 @@ export interface HostDeps {
 
 export function createServices(deps: HostDeps): Services {
   const newId = () => crypto.randomUUID();
+  const now = () => new Date();
+  const catalog = createCatalog({ repo: createCatalogRepository(deps.db, newId), now, newId });
   return {
     config: deps.config,
     db: deps.db,
     media: deps.media,
     auth: createAuth({ config: deps.config, db: deps.db, fetchClientMetadata: deps.fetchClientMetadata }),
-    catalog: createCatalog({ repo: createCatalogRepository(deps.db, newId), now: () => new Date(), newId }),
+    catalog,
+    submissions: createSubmissions({ repo: createSubmissionsRepository(deps.db), catalog, now, newId }),
   };
 }
 
@@ -76,7 +85,18 @@ export async function handleRequest(request: Request, services: Services, render
     // Better Auth serves OAuth/OIDC discovery and protected-resource metadata.
     response = await services.auth.handler(request);
   } else if (pathname === MCP_PATH) {
-    response = await createMcpEndpoint(services.auth, services.config)(request);
+    response = await handleMcp(request, services);
+  } else if (pathname === "/api/v1" || pathname.startsWith("/api/v1/")) {
+    response = await handleApiV1(request, services);
+  } else if (pathname.startsWith("/media/") && (request.method === "GET" || request.method === "HEAD")) {
+    response = await servePhoto(request, {
+      db: services.db,
+      media: services.media,
+      isAdmin: async () => {
+        const session = await services.auth.api.getSession({ headers: request.headers });
+        return isAdminEmail(session?.user.email, services.config.adminEmails);
+      },
+    });
   } else {
     response = await renderPage(request, services);
   }

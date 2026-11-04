@@ -85,7 +85,7 @@ describe("server-side authorization on every write (AC-064, AC-027)", () => {
 
   it("rejects unauthorized edits, deletes and restores", async () => {
     const created = await services.catalog.create(
-      { kind: "recipe", title: "Keep me", description: null, notes: null, yieldText: null, prepTime: null, cookTime: null, ingredients: [], steps: [], sourceUrl: null, sourceName: null, tags: [], collectionIds: [] },
+      { kind: "recipe", title: "Keep me", description: null, notes: null, yieldText: null, prepTime: null, cookTime: null, ingredients: [], steps: [], sourceUrl: null, sourceName: null, tags: [], collectionIds: [], photos: [] },
       { userId: "x" },
     );
     const id = created.ok ? created.id : "";
@@ -112,7 +112,7 @@ describe("server-side authorization on every write (AC-064, AC-027)", () => {
 describe("public browsing needs no sign-in (AC-001, AC-065, AC-068)", () => {
   it("shows saved entries to signed-out visitors immediately", async () => {
     const created = await services.catalog.create(
-      { kind: "idea", title: "Miso caramel peaches?", description: null, notes: null, yieldText: null, prepTime: null, cookTime: null, ingredients: [], steps: [], sourceUrl: null, sourceName: null, tags: [], collectionIds: [] },
+      { kind: "idea", title: "Miso caramel peaches?", description: null, notes: null, yieldText: null, prepTime: null, cookTime: null, ingredients: [], steps: [], sourceUrl: null, sourceName: null, tags: [], collectionIds: [], photos: [] },
       { userId: "x" },
     );
     const id = created.ok ? created.id : "";
@@ -125,7 +125,7 @@ describe("public browsing needs no sign-in (AC-001, AC-065, AC-068)", () => {
 
   it("returns 404 for deleted entries", async () => {
     const created = await services.catalog.create(
-      { kind: "recipe", title: "Gone", description: null, notes: null, yieldText: null, prepTime: null, cookTime: null, ingredients: [], steps: [], sourceUrl: null, sourceName: null, tags: [], collectionIds: [] },
+      { kind: "recipe", title: "Gone", description: null, notes: null, yieldText: null, prepTime: null, cookTime: null, ingredients: [], steps: [], sourceUrl: null, sourceName: null, tags: [], collectionIds: [], photos: [] },
       { userId: "x" },
     );
     const id = created.ok ? created.id : "";

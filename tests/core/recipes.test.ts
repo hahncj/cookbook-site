@@ -118,6 +118,7 @@ describe("schema.org Recipe", () => {
     deletedAt: null,
     tags: [{ id: "t", name: "Weeknight" }],
     collections: [],
+    photos: [],
   };
 
   it("emits ingredients, steps, and only parseable times", () => {
