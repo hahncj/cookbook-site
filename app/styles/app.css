@@ -249,10 +249,202 @@ button {
   color: var(--text);
 }
 
+/* Admin buttons and the account control, kept together at the right end (E2). */
+.header-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
 .header-actions {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.header-sign-in {
+  white-space: nowrap;
+}
+
+.btn-icon {
+  width: 44px;
+  padding: 0;
+}
+
+.avatar {
+  display: block;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.account {
+  position: relative;
+}
+
+.account-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.account-button:hover,
+.account-button[aria-expanded="true"] {
+  border-color: var(--border);
+}
+
+.account-name {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+
+/* Phones: just the picture, and tighter buttons so admin actions and the
+   account fit on the same row as the logo. */
+@media (max-width: 599px) {
+  .account-name,
+  .account-chevron {
+    display: none;
+  }
+
+  .account-button {
+    justify-content: center;
+    padding: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .site-header-inner {
+    column-gap: 10px;
+  }
+
+  .header-end,
+  .header-actions {
+    gap: 6px;
+  }
+
+  .header-actions .btn {
+    padding: 0 10px;
+  }
+}
+
+@media (max-width: 400px) {
+  .header-actions .btn {
+    padding: 0 8px;
+  }
+
+  /* "Add" still says Add; the plus sign is the first thing to go. */
+  .header-actions .btn-primary .icon {
+    display: none;
+  }
+}
+
+.account-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  width: max-content;
+  min-width: 220px;
+  max-width: min(300px, calc(100vw - 2 * var(--gutter)));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.account-panel[hidden] {
+  display: none;
+}
+
+.account-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.account-links {
+  list-style: none;
+  margin: 0;
+  padding: 6px 0;
+}
+
+.account-links a,
+.account-links button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.account-links a:hover,
+.account-links button:hover {
+  background: var(--surface-2);
+}
+
+.settings-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.settings-links li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.settings-links li:last-child {
+  border-bottom: 0;
+}
+
+.settings-links a {
+  font-weight: 600;
 }
 
 .header-search {
@@ -274,27 +466,6 @@ button {
 .site-main {
   padding-top: 20px;
   padding-bottom: 48px;
-}
-
-.site-footer {
-  border-top: 1px solid var(--rule);
-  padding-top: 16px;
-  padding-bottom: 24px;
-}
-
-.site-footer-inner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px 20px;
-  font-size: 14px;
-}
-
-.footer-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
 }
 
 /* ---------- Buttons and controls ---------- */

@@ -9,11 +9,18 @@ export interface Fixtures {
   longId: string;
   ideaId: string;
   cookie: { name: string; value: string };
+  /** A signed-in non-admin ("Pat Example") with a profile picture. */
+  viewerCookie: { name: string; value: string };
   freshCookie: { name: string; value: string };
 }
 
 export function fixtures(): Fixtures {
   return JSON.parse(readFileSync(`${E2E.dir}/fixtures.json`, "utf8"));
+}
+
+export async function signInAsViewer(context: BrowserContext) {
+  const { viewerCookie: c } = fixtures();
+  await context.addCookies([{ name: c.name, value: c.value, url: E2E.baseURL, httpOnly: true, sameSite: "Lax" }]);
 }
 
 export async function signInAsAdmin(context: BrowserContext, instance: "main" | "fresh" = "main") {
