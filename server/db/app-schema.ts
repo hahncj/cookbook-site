@@ -130,6 +130,31 @@ export const recipeNotes = sqliteTable(
   (t) => [index("recipe_notes_recipe_idx").on(t.recipeId, t.createdAt)],
 );
 
+/**
+ * Feedback flags per recipe (M6, AC-056). A missing row means no flags. The
+ * timestamps record when a flag was last turned on (null = off), so
+ * recommendations (M7) can weigh recent feedback.
+ */
+export const recipeMarkers = sqliteTable("recipe_markers", {
+  recipeId: text("recipe_id").primaryKey().references(() => recipes.id),
+  favoriteAt: integer("favorite_at", { mode: "timestamp_ms" }),
+  wantToTryAt: integer("want_to_try_at", { mode: "timestamp_ms" }),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  updatedBy: text("updated_by"),
+});
+
+/** One row each time a recipe was made (M6, AC-056): count and recency for M7. */
+export const recipeMade = sqliteTable(
+  "recipe_made",
+  {
+    id: text("id").primaryKey(),
+    recipeId: text("recipe_id").notNull().references(() => recipes.id),
+    madeAt: integer("made_at", { mode: "timestamp_ms" }).notNull(),
+    createdBy: text("created_by"),
+  },
+  (t) => [index("recipe_made_recipe_idx").on(t.recipeId, t.madeAt)],
+);
+
 /** Simple key/value settings (e.g. "approval_required", default on). */
 export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),

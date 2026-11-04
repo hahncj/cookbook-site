@@ -284,6 +284,24 @@ Link fetching is SSRF-safe: http(s) only, standard ports, no private, local or c
 
 **Done when:** AC-054–056, 060 pass.
 
+#### M6 status (2026-11-04, branch `feature/m6-cooking-mode`)
+
+Verified by automated tests (`npm run check`: 199 unit/integration tests; `npm run test:e2e`: 179 browser checks across phone (Chromium and WebKit), tablet and desktop). Lose It! work was dropped from M6 (D13); the schema.org Recipe markup is unchanged and still carries the original amounts.
+
+| Check | How it was verified |
+| --- | --- |
+| AC-054 | A servings stepper (from the recipe's yield) scales ingredient amounts in the browser. Reloading shows the original amounts, the stored recipe and its schema.org markup never change, and the page says so |
+| AC-060 | Unit tests and browser checks: fractions (1/2, 1 1/2, ½, 1⅓), decimals and ranges (2-3, 1 to 2) scale, keeping units and words as written. Blank amounts, words ("to taste", "a pinch") and amounts with more than one number ("1 cup plus 2 tbsp", "2 (14 oz) cans") stay as written and are flagged. A missing, ranged or wordy yield is never guessed: the page offers ×½ to ×3 instead. Times, temperatures and amounts in the steps are not changed, and a note says so |
+| AC-055 | Cooking mode asks for a Screen Wake Lock when opened, releases it when closed (Done or Escape), and asks again after the page comes back into view. When the browser has no Wake Lock it explains that the screen may dim and how to raise Auto-Lock; when the request is refused it says so and offers "Keep screen on". Browser tests replace the Wake Lock API to check each case. **Real-device checks on iPhone Safari, the Home Screen app, Chrome on iPhone and Android remain for the owner's device checklist (M8).** |
+| AC-056 | "Favorite", "Want to try" and "Made" persist (new tables `recipe_markers` and `recipe_made`, migration 0007). Favorite is independent of cooking status; recording "made" clears "want to try" but never sets favorite. Each "made" is dated, so counts and recency are kept. `services.markers.signals()` returns this evidence for active recipes for M7's recommendations. Markers are public to read (D3); only admins change them (401 signed out, 403 non-admin). Changing one never creates a recipe version |
+| AC-061 (feedback) | Backups include both marker tables; a backup restores them into a fresh cookbook, and older backups without them still restore |
+
+Proposed defaults (not owner decisions): recording "made" clears "want to try"; the cooking-mode button sits above the ingredients instead of in a sticky bottom bar (that bar would cover the floating Add button from E2); the chosen servings are kept only while the page is open.
+
+Also verified: the Cloudflare build compiles, and all migrations through 0007 apply in order to a local D1 database.
+
+Production after merge: `npm run deploy:ci` applies migration 0007. Then check it with the read-only command in AGENTS.md (it should say "No migrations to apply").
+
 ### M7 — Recommendations and preferences
 
 - "Ask AI" with ranked saved recipes and web discoveries (Claude web search/fetch), labeled with sources and short reasons.
