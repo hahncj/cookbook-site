@@ -26,10 +26,10 @@ export interface EntryFormValues {
   changeNote: string;
   revision: number;
   /** Where a new entry came from (set by imports); ignored on edits. */
-  origin: "manual" | "paste" | "web" | "image";
+  origin: "manual" | "paste" | "web" | "image" | "ai";
 }
 
-const ORIGINS = ["manual", "paste", "web", "image"] as const;
+const ORIGINS = ["manual", "paste", "web", "image", "ai"] as const;
 
 const text = (form: FormData, name: string) => {
   const value = form.get(name);

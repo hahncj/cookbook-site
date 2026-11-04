@@ -5,7 +5,7 @@ import { EntryForm } from "../components/entry-form";
 import { servicesContext } from "../context";
 import { draftToFormValues, saveEntryAction, type EntryActionData, type EntryFormValues } from "../entry-form.server";
 import { preparePhoto, uploadPhoto } from "../photo-prepare";
-import { importFromImage, importFromLink, importFromText, type ImportOutcome } from "../../server/ai-features";
+import { importFromImage, importFromLink, importFromText, writtenToDraft, type ImportOutcome } from "../../server/ai-features";
 import { AI_NOT_CONFIGURED } from "../../server/core/ai";
 import type { DuplicateMatch } from "../../server/core/duplicates";
 import type { Route } from "./+types/recipe-import";
@@ -19,7 +19,7 @@ type ImportActionData =
       values: EntryFormValues;
       uncertain: string[];
       otherRecipes: number;
-      method: "structured" | "ai";
+      method: "structured" | "ai" | "written";
       duplicates: DuplicateMatch[];
     }
   | (EntryActionData & { stage?: undefined });
@@ -31,7 +31,7 @@ export function meta() {
 export async function loader({ request, context }: Route.LoaderArgs) {
   const services = context.get(servicesContext);
   await requireAdminPage(request, services);
-  // "Save to cookbook" on an Ask AI web discovery (M7) opens here with the link filled in.
+  // "Save to cookbook" on a web recipe found with AI mode (M7) opens here with the link filled in.
   const prefill = new URL(request.url).searchParams.get("url") ?? "";
   return {
     collections: await services.catalog.listCollections(),
@@ -44,6 +44,14 @@ export async function action({ request, context }: Route.ActionArgs) {
   const services = context.get(servicesContext);
   const form = await request.clone().formData();
   const intent = String(form.get("intent") ?? "");
+  if (intent === "written") {
+    // "Save to cookbook" on an AI-written recipe (M7, D19): fills the editor only.
+    await requireAdminWrite(request, services);
+    const draft = writtenToDraft(String(form.get("draft") ?? ""));
+    if (!draft) return data<ImportActionData>({ stage: "input", tab: "paste", error: "That recipe couldn't be opened. Try finding it again.", text: "", url: "" }, { status: 422 });
+    const duplicates = await services.catalog.findSimilar({ title: draft.title, ingredients: draft.ingredients.map((i) => i.item) });
+    return data<ImportActionData>({ stage: "review", values: draftToFormValues(draft, "ai"), uncertain: [], otherRecipes: 0, method: "written", duplicates });
+  }
   if (intent !== "paste" && intent !== "link" && intent !== "photo") {
     // The reviewed draft is being saved: the owner's Save is the approval (D2).
     return saveEntryAction(request, services, null);
@@ -109,7 +117,9 @@ export default function ImportRecipe({ loaderData, actionData }: Route.Component
               <strong>Check everything before saving.</strong>
               {review.method === "structured"
                 ? "Read from the page's own recipe data."
-                : "Extracted by AI. Missing details were left blank rather than guessed."}
+                : review.method === "written"
+                  ? "Written by AI and untested. Check the amounts, times and steps."
+                  : "Extracted by AI. Missing details were left blank rather than guessed."}
               {review.otherRecipes > 0 && (
                 <p>
                   The source had {review.otherRecipes} more recipe{review.otherRecipes === 1 ? "" : "s"}. Only the first was imported; import the

@@ -11,7 +11,7 @@ import type { Route } from "./+types/preferences";
 // The preference profile (M7, workflow 6). Everyone can read it (D3). Only
 // admins refresh it (an AI call, on request only, D9) or correct it.
 // Corrections survive refreshes and rejected items don't come back
-// (AC-017, AC-035). The profile only affects "Ask AI".
+// (AC-017, AC-035). The profile only affects AI mode in the search bar.
 
 type ActionData = { ok: true; message: string } | { ok: false; error: string; intent: string; id?: string };
 
@@ -84,14 +84,9 @@ export default function PreferencesPage({ loaderData, actionData }: Route.Compon
     <div className="form-page preferences-page">
       <div className="form-head">
         <h1>Preferences</h1>
-        {isAdmin && (
-          <Link to="/ask" className="btn">
-            Ask AI
-          </Link>
-        )}
       </div>
       <p className="lede">
-        What the AI has learned about how this kitchen likes to cook, with the recipes behind each guess. It's only used for Ask AI suggestions.
+        What the AI has learned about how this kitchen likes to cook, with the recipes behind each guess. It's only used when an admin finds new recipes with AI mode in the search bar.
       </p>
 
       {isAdmin && (

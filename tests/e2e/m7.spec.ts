@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { E2E } from "../../playwright.config";
-import { clickAdminLink, expectAccessible, expectNoHorizontalScroll, signInAsAdmin, signInAsViewer } from "./fixtures";
+import { expectAccessible, expectNoHorizontalScroll, signInAsAdmin, signInAsViewer } from "./fixtures";
 
 // M7 — Recommendations and preferences: AC-015, AC-016, AC-017, AC-034,
 // AC-035. The real Claude adapter runs against the local mock (no paid
@@ -28,6 +28,19 @@ async function resetProfile(page: Page) {
 }
 
 const section = (page: Page, name: string) => page.getByRole("region", { name });
+
+const aiToggle = (page: Page) => page.getByRole("banner").getByRole("button", { name: "AI mode: find new recipes" });
+
+/** Turns on AI mode in the header search bar and asks for new recipes. */
+async function findWithAi(page: Page, request: string) {
+  await aiToggle(page).click();
+  await expect(aiToggle(page)).toHaveAttribute("aria-pressed", "true");
+  const box = page.getByRole("searchbox", { name: "Describe new recipes to find with AI" });
+  await box.fill(request);
+  await box.press("Enter");
+  await expect(page).toHaveURL(/\/discover$/);
+  await expect(page.getByRole("heading", { level: 2, name: `New recipes for “${request}”` })).toBeVisible();
+}
 
 test.describe("preferences (AC-016, AC-017, AC-035)", () => {
   test("refresh infers preferences with evidence; corrections and rejections survive a refresh and shape suggestions", async ({ page, context }) => {
@@ -66,12 +79,9 @@ test.describe("preferences (AC-016, AC-017, AC-035)", () => {
     await expect(section(page, "Not true").getByText("Enjoys hearty one-pot meals")).toBeVisible();
     await expect(confirmed.getByText("Likes mild Korean flavors, not too spicy")).toBeVisible();
 
-    // AC-017: later recommendations reflect the correction.
-    await page.goto("/ask");
-    await page.getByLabel("Also look for new recipes on the web").uncheck();
-    await page.getByLabel("What are you looking for?").fill("noodles tonight");
-    await page.getByRole("button", { name: "Get suggestions" }).click();
-    await expect(page.getByText("Matches your preference: Likes mild Korean flavors, not too spicy.").first()).toBeVisible();
+    // AC-017: later AI searches reflect the correction.
+    await findWithAi(page, "noodles tonight");
+    await expect(page.getByText("Matches your preference: Likes mild Korean flavors, not too spicy.")).toBeVisible();
 
     // Visitors can read the profile (D3) but get no controls.
     await context.clearCookies();
@@ -81,57 +91,68 @@ test.describe("preferences (AC-016, AC-017, AC-035)", () => {
   });
 });
 
-test.describe("Ask AI (AC-015, AC-034)", () => {
-  test("suggests labeled saved recipes and web discoveries with sources, and saving goes through the editor", async ({ page, context }) => {
+test.describe("AI mode in the search bar (AC-015, AC-034)", () => {
+  test("finds new web recipes and AI-written ones, labeled, and saving goes through the editor", async ({ page, context }) => {
     await signInAsAdmin(context);
     await page.goto("/");
-    await clickAdminLink(page, "Ask AI");
-    await expect(page.getByRole("heading", { level: 1, name: "Ask AI" })).toBeVisible();
-    await expect(page.getByLabel("Also look for new recipes on the web")).toBeChecked();
-    await page.getByLabel("What are you looking for?").fill("noodles tonight");
-    await page.getByRole("button", { name: "Get suggestions" }).click();
+    await expect(aiToggle(page)).toHaveAttribute("aria-pressed", "false");
+    await findWithAi(page, "noodles tonight");
 
-    const results = page.getByRole("region", { name: "Suggestions" });
-    const savedCard = results.getByRole("listitem").filter({ hasText: "Saved recipe" }).filter({ hasText: "Gochujang Butter Noodles" }).first();
-    await expect(savedCard).toBeVisible();
-    await expect(savedCard).toContainText("Fits “noodles tonight”.");
-    // A made-up recipe id is never shown.
-    await expect(results.getByText("Not a real recipe.")).toHaveCount(0);
-
-    // AC-034: the web discovery is labeled, links to its source, and says the page was read.
-    const webCard = results.getByRole("listitem").filter({ hasText: "Web discovery" });
+    const results = page.getByRole("region", { name: /New recipes for/ });
+    // AC-034: web recipes are labeled, link to their source, and say the page was read.
+    const webCard = results.getByRole("listitem").filter({ hasText: "From the web" });
     await expect(webCard).toHaveCount(1);
     const link = webCard.getByRole("link", { name: /Miso Glazed Eggplant/ });
     await expect(link).toHaveAttribute("href", "https://recipes.e2e.test/miso-eggplant");
     await expect(link).toHaveAttribute("target", "_blank");
     await expect(webCard).toContainText("Source: E2E Recipes (recipes.e2e.test)");
     await expect(webCard).toContainText("Page read by AI");
+    await expect(webCard.getByRole("link", { name: "Save to cookbook…" })).toHaveAttribute(
+      "href",
+      "/recipes/import?url=https%3A%2F%2Frecipes.e2e.test%2Fmiso-eggplant",
+    );
     // The invented link is dropped, and the page says so.
     await expect(results.getByText("Imaginary Pie")).toHaveCount(0);
     await expect(results.getByText("1 web suggestion was left out because the link couldn't be confirmed.")).toBeVisible();
+
+    // D19: AI-written recipes are labeled untested, with the full recipe on request.
+    const written = results.getByRole("listitem").filter({ hasText: "Written by AI · untested" });
+    await expect(written).toHaveCount(1);
+    await expect(written.getByRole("heading", { name: "AI Noodles Tonight Bowl" })).toBeVisible();
+    await written.getByText("Show ingredients and steps").click();
+    await expect(written.getByText("200 g rice noodles")).toBeVisible();
     await expectNoHorizontalScroll(page);
     await expectAccessible(page);
 
-    // Saving is explicit: the import editor opens with the link; nothing is saved yet (D2).
-    await webCard.getByRole("link", { name: "Save to cookbook…" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Import a recipe" })).toBeVisible();
-    await expect(page.getByLabel("Web address")).toHaveValue("https://recipes.e2e.test/miso-eggplant");
-    await expect(page.getByRole("button", { name: "Web link" })).toHaveAttribute("aria-pressed", "true");
+    // Saving is explicit: the editor opens with the recipe; nothing is saved until Save (D2).
+    await written.getByRole("button", { name: "Save to cookbook: AI Noodles Tonight Bowl" }).click();
+    await expect(page.getByText("Written by AI and untested. Check the amounts, times and steps.")).toBeVisible();
+    await expect(page.getByLabel("Title")).toHaveValue("AI Noodles Tonight Bowl");
+    await expect(page.getByLabel("Amount 1", { exact: true })).toHaveValue("200 g");
+    await expect(aiToggle(page)).toHaveAttribute("aria-pressed", "false");
+
+    // With AI mode off, the same box searches the cookbook as before.
+    const search = page.getByRole("searchbox", { name: "Search recipes" });
+    await search.fill("gochujang");
+    await search.press("Enter");
+    await expect(page).toHaveURL(/\/\?q=gochujang/);
   });
 
-  test("only admins can ask; without an API key it says AI isn't set up", async ({ page, context }) => {
-    const response = await page.goto("/ask");
-    await expect(page).toHaveURL(/\/sign-in\?next=%2Fask/);
-    expect(response?.ok()).toBe(true);
+  test("only admins get AI mode; without an API key it says AI isn't set up", async ({ page, context }) => {
+    await page.goto("/");
+    await expect(aiToggle(page)).toHaveCount(0);
+    await page.goto("/discover");
+    await expect(page).toHaveURL(/\/sign-in\?next=%2Fdiscover/);
 
     await signInAsViewer(context);
-    const denied = await page.goto("/ask");
+    await page.goto("/");
+    await expect(aiToggle(page)).toHaveCount(0);
+    const denied = await page.goto("/discover");
     expect(denied?.status()).toBe(403);
 
     await context.clearCookies();
     await signInAsAdmin(context, "fresh");
-    await page.goto(`${E2E.fresh.baseURL}/ask`);
+    await page.goto(`${E2E.fresh.baseURL}/discover`);
     await expect(page.getByText("AI features aren't set up yet")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Get suggestions" })).toBeDisabled();
   });
 });

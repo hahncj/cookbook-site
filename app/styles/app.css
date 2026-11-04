@@ -2024,15 +2024,57 @@ figcaption {
   background: var(--surface-2);
 }
 
-/* M7: Ask AI and Preferences */
-.ask-form,
+/* M7: AI mode in the search bar, discoveries and preferences */
+.search-with-ai input {
+  padding-right: 64px;
+}
+.ai-toggle {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  min-width: 52px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 2px);
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ai-toggle-on {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.ai-finding {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+.written-recipe details summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.written-recipe ul,
+.written-recipe ol {
+  margin: 8px 0 0;
+  padding-left: 22px;
+}
+.suggestion-written {
+  background: var(--flag-bg);
+  color: var(--flag);
+}
+
 .prefs-add,
 .prefs-refresh {
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
-.ask-results {
+.discover-results {
   display: flex;
   flex-direction: column;
   gap: 14px;
