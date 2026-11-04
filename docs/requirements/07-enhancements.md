@@ -113,6 +113,24 @@ Should Backup and Deleted recipes live in Settings for admins?
 - Keep those as their own pages, so existing links and tests still work. Only where you reach them from changes.
 - Remove them from the footer.
 
+## E5. AI help on a recipe
+
+### Owner request — Confirmed 2026-11-04
+
+AI could help while on a recipe: when an ingredient is missing, or to change the recipe.
+
+### Built behavior
+
+- Admins see an **AI help** section on each recipe page. It runs only when asked. Visitors and non-admins don't see it.
+- **Missing an ingredient:** pick one of the recipe's ingredients and, optionally, say what you have. Claude suggests up to 4 swaps, each with how much to use and how the dish will differ. A swap can be kept with **Save as a note** (a dated note under Notes & experiments; the recipe and its versions don't change).
+- **Change this recipe:** describe the change (for example "make it vegetarian", "halve it", "use the air fryer"). Claude returns the whole changed recipe, labeled "Changed by AI · untested", with a list of what changed. Then:
+  - **Edit this recipe with these changes…** opens the editor with the changes filled in. Saving makes a new version; the old one stays in the history.
+  - **Save as a new recipe…** opens the import editor with the changed recipe as a new entry.
+- Nothing is saved until the owner presses Save (D2). Swap amounts and changed amounts are the AI's suggestions (D20).
+- The preference profile is added as context. Allergies and medical restrictions are never inferred.
+
+**Proposed (not owner decisions):** the panel sits below the ingredients and steps, not inside cooking mode; a saved swap note reads "AI swap idea for …"; the editor's change note is prefilled with "AI change: …".
+
 ## Status
 
 | Item | Status | Notes |
@@ -120,4 +138,5 @@ Should Backup and Deleted recipes live in Settings for admins?
 | E1 | In progress | Built separately. |
 | E2 | Merged 2026-11-04 (PR #15, phone top bar PR #17); same top bar on every screen built 2026-11-04, awaiting review | **Sign in** sits at the right of the top bar and goes straight to Google, returning to the same page. Signed in, the spot shows the Google picture (name too on screens 600px and wider, first letter if no picture) and opens a menu: name and email, Settings, Sign out. Better Auth already saves Google's picture as `user.image`; it is now refreshed on every sign-in (`overrideUserInfoOnSignIn`). `/sign-in` stays for AI tool connections, retitled **Sign in**. Follow-ups: on every screen size, Add is a floating **+** button and Review / Import are in the profile menu, with a dot on the picture when reviews wait. |
 | E3 | Merged 2026-11-04 (PR #15) | `/settings` is open to everyone. Visitors see Appearance only; admins also see the admin sections, whose actions still refuse signed-out (401) and non-admin (403) requests. Visitors reach it from a gear in the top bar. The footer is gone, since nothing was left in it. |
+| E5 | Built 2026-11-04, awaiting review | See E5 above. Claude Opus 5.5, no web search. Estimated 2–5¢ for swaps and 5–10¢ for a change (estimates, to confirm in M8). |
 | E4 | Merged 2026-11-04 (PR #15) | **Admin tools** section in Settings links to Backup and Deleted recipes. Both pages are unchanged. |

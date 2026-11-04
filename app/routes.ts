@@ -19,6 +19,7 @@ export default [
   route("api/photos/fetch", "routes/api.photos.fetch.ts"),
   route("api/ai/ingredients", "routes/api.ai.ingredients.ts"),
   route("api/ai/compare", "routes/api.ai.compare.ts"),
+  route("api/ai/recipe-help", "routes/api.ai.recipe-help.ts"),
   route("api/duplicates", "routes/api.duplicates.ts"),
   route("api/backup", "routes/api.backup.ts"),
   route("api/backup/restore", "routes/api.backup.restore.ts"),

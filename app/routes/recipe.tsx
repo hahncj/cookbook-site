@@ -3,6 +3,7 @@ import { jsonForScriptTag, toSchemaOrgRecipe } from "../../server/core/recipes";
 import { parseMarkerAction } from "../../server/core/markers";
 import { requireAdminWrite } from "../admin.server";
 import { CookingSection } from "../components/cooking";
+import { RecipeHelp } from "../components/recipe-help";
 import { MarkerBar, markersView } from "../components/markers";
 import { BackIcon, EditIcon, HistoryIcon } from "../components/icons";
 import { servicesContext } from "../context";
@@ -25,7 +26,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     photoCredits(services.db, entry.photos.map((p) => p.id)),
     services.markers.get(entry.id),
   ]);
-  return { entry, notes, credits, markers, schemaJson: schema ? jsonForScriptTag(schema) : null };
+  return { entry, notes, credits, markers, schemaJson: schema ? jsonForScriptTag(schema) : null, aiEnabled: services.ai.configured };
 }
 
 // POST (admin only), either:
@@ -72,7 +73,7 @@ function sourceLabel(url: string) {
 }
 
 export default function RecipePage({ loaderData, actionData }: Route.ComponentProps) {
-  const { entry, notes, credits, markers, schemaJson } = loaderData;
+  const { entry, notes, credits, markers, schemaJson, aiEnabled } = loaderData;
   const { viewer } = useRootData();
   const navigation = useNavigation();
   const addingNote = navigation.state === "submitting" && navigation.formData?.has("note");
@@ -137,6 +138,10 @@ export default function RecipePage({ loaderData, actionData }: Route.ComponentPr
         isAdmin={Boolean(viewer?.isAdmin)}
         markers={markersView(markers)}
       />
+
+      {viewer?.isAdmin && !(isIdea && entry.ingredients.length === 0 && entry.steps.length === 0) && (
+        <RecipeHelp recipeId={entry.id} ingredients={[...new Set(entry.ingredients.map((i) => i.item.trim()).filter(Boolean))]} aiEnabled={aiEnabled} />
+      )}
 
       {isIdea && entry.ingredients.length === 0 && entry.steps.length === 0 && !entry.notes && (
         <p className="muted">Just an idea so far — no recipe yet.</p>

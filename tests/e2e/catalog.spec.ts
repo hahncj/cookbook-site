@@ -115,7 +115,7 @@ test.describe("admin flow (AC-005, AC-009, AC-068, D6)", () => {
     await page.getByRole("button", { name: "Save" }).first().click();
 
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
-    await expect(page.getByText("chipotle in adobo, to taste")).toBeVisible();
+    await expect(page.getByRole("region", { name: "Ingredients" }).getByText("chipotle in adobo, to taste")).toBeVisible();
 
     // Immediately public (AC-068): a signed-out browser sees it.
     const publicPage = await page.context().browser()!.newPage();
