@@ -98,3 +98,33 @@ export const ChevronDownIcon = (p: IconProps) => (
     <path d="M6 9l6 6 6-6" />
   </Icon>
 );
+
+export const StarIcon = (p: IconProps) => (
+  <Icon strokeWidth={1.6} {...p}>
+    <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" />
+  </Icon>
+);
+
+export const CheckIcon = (p: IconProps) => (
+  <Icon strokeWidth={2.4} {...p}>
+    <path d="M5 12.5l4.5 4.5L19 7.5" />
+  </Icon>
+);
+
+export const BookmarkIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M7 4h10v16l-5-3.5L7 20z" />
+  </Icon>
+);
+
+export const MinusIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M5 12h14" />
+  </Icon>
+);
+
+export const FlameIcon = (p: IconProps) => (
+  <Icon strokeWidth={1.8} {...p}>
+    <path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-4 2.5-5 .3 1.6 1 2.5 2 3 0-3 .5-5.5.5-8z" />
+  </Icon>
+);

@@ -1,6 +1,9 @@
 import { Form, Link, data, useNavigation } from "react-router";
 import { jsonForScriptTag, toSchemaOrgRecipe } from "../../server/core/recipes";
+import { parseMarkerAction } from "../../server/core/markers";
 import { requireAdminWrite } from "../admin.server";
+import { CookingSection } from "../components/cooking";
+import { MarkerBar, markersView } from "../components/markers";
 import { BackIcon, EditIcon, HistoryIcon } from "../components/icons";
 import { servicesContext } from "../context";
 import { photoUrl } from "../photo-prepare";
@@ -17,15 +20,28 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   if (schema && entry.photos.length > 0) {
     schema.image = entry.photos.map((photo) => `${services.config.baseUrl}${photoUrl(photo.id)}`);
   }
-  const [notes, credits] = await Promise.all([services.catalog.listNotes(entry.id), photoCredits(services.db, entry.photos.map((p) => p.id))]);
-  return { entry, notes, credits, schemaJson: schema ? jsonForScriptTag(schema) : null };
+  const [notes, credits, markers] = await Promise.all([
+    services.catalog.listNotes(entry.id),
+    photoCredits(services.db, entry.photos.map((p) => p.id)),
+    services.markers.get(entry.id),
+  ]);
+  return { entry, notes, credits, markers, schemaJson: schema ? jsonForScriptTag(schema) : null };
 }
 
-// POST: add a dated "notes & experiments" entry (admin only; not a new version).
+// POST (admin only), either:
+// - `marker`: change a feedback marker (M6, AC-056; not a new version), or
+// - `note`: add a dated "notes & experiments" entry (not a new version).
 export async function action({ request, params, context }: Route.ActionArgs) {
   const services = context.get(servicesContext);
   const admin = await requireAdminWrite(request, services);
   const form = await request.formData();
+  if (form.has("marker")) {
+    const marker = parseMarkerAction(form.get("marker"));
+    if (!marker) return data({ markerError: "That change isn't recognized. Reload the page and try again.", noteError: null, noteDraft: null }, { status: 400 });
+    const result = await services.markers.apply(params.id, marker, { userId: admin.userId });
+    if (result === "not_found") throw data("Not found", { status: 404 });
+    return { markerError: null, noteError: null, noteDraft: null };
+  }
   const body = String(form.get("note") ?? "");
   const result = await services.catalog.addNote(params.id, body, { userId: admin.userId });
   if (result === "not_found") throw data("Not found", { status: 404 });
@@ -56,7 +72,7 @@ function sourceLabel(url: string) {
 }
 
 export default function RecipePage({ loaderData, actionData }: Route.ComponentProps) {
-  const { entry, notes, credits, schemaJson } = loaderData;
+  const { entry, notes, credits, markers, schemaJson } = loaderData;
   const { viewer } = useRootData();
   const navigation = useNavigation();
   const addingNote = navigation.state === "submitting" && navigation.formData?.has("note");
@@ -110,38 +126,17 @@ export default function RecipePage({ loaderData, actionData }: Route.ComponentPr
             ))}
           </p>
         )}
+        <MarkerBar saved={markersView(markers)} isAdmin={Boolean(viewer?.isAdmin)} />
       </header>
 
-      {entry.ingredients.length > 0 && (
-        <section aria-labelledby="ingredients-heading">
-          <h2 id="ingredients-heading" className="section-title">
-            Ingredients
-          </h2>
-          <ul className="ingredients">
-            {entry.ingredients.map((row, index) => (
-              <li key={index}>
-                <span className="qty">{row.quantity || <span className="muted">—</span>}</span>
-                <span>{row.item}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {entry.steps.length > 0 && (
-        <section aria-labelledby="method-heading">
-          <h2 id="method-heading" className="section-title">
-            Method
-          </h2>
-          <ol className="steps">
-            {entry.steps.map((step, index) => (
-              <li key={index}>
-                <span>{step}</span>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
+      <CookingSection
+        title={entry.title}
+        yieldText={entry.yieldText}
+        ingredients={entry.ingredients}
+        steps={entry.steps}
+        isAdmin={Boolean(viewer?.isAdmin)}
+        markers={markersView(markers)}
+      />
 
       {isIdea && entry.ingredients.length === 0 && entry.steps.length === 0 && !entry.notes && (
         <p className="muted">Just an idea so far — no recipe yet.</p>

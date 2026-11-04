@@ -11,6 +11,8 @@ import { createSubmissionsRepository } from "./adapters/submissions-repo";
 import { createSubmissions, type Submissions } from "./core/submissions";
 import { createCatalogRepository } from "./adapters/catalog-repo";
 import { createCatalog, type Catalog } from "./core/catalog";
+import { createMarkersRepository } from "./adapters/markers-repo";
+import { createMarkers, type Markers } from "./core/markers";
 import { isAdminEmail } from "./core/admin";
 import { servePhoto } from "./photos";
 import { notConfigured, type RecipeAi } from "./core/ai";
@@ -27,6 +29,8 @@ export interface Services {
   /** Absent when the host has no media storage configured yet. */
   media: MediaStore | null;
   catalog: Catalog;
+  /** Want to try / made / favorite (M6). Public to read, admin-only to change. */
+  markers: Markers;
   submissions: Submissions;
   /** In-app AI (admin-only). A stub that reports "not set up" when there's no key. */
   ai: RecipeAi;
@@ -64,6 +68,12 @@ export function createServices(deps: HostDeps): Services {
     media: deps.media,
     auth: createAuth({ config: deps.config, db: deps.db, fetchClientMetadata: deps.fetchClientMetadata }),
     catalog,
+    markers: createMarkers({
+      repo: createMarkersRepository(deps.db),
+      recipeExists: async (id) => (await catalog.get(id)) !== null,
+      now,
+      newId,
+    }),
     submissions: createSubmissions({ repo: createSubmissionsRepository(deps.db), catalog, now, newId }),
     ai:
       deps.ai ??

@@ -4,7 +4,7 @@ import type { Database } from "./adapters/db";
 import type { MediaStore } from "./adapters/media";
 import { atomic } from "./adapters/atomic";
 import { cleanImage, IMAGE_CONTENT_TYPES, ImageError } from "./core/images";
-import { collections, photos, recipeCollections, recipeNotes, recipeRevisions, recipes, recipeTags, tags } from "./db/app-schema";
+import { collections, photos, recipeCollections, recipeMade, recipeMarkers, recipeNotes, recipeRevisions, recipes, recipeTags, tags } from "./db/app-schema";
 
 /**
  * Full backups (D7, AC-041/053/061). The browser downloads the data JSON and
@@ -25,6 +25,9 @@ export const TABLE_ORDER = [
   "photos",
   "recipe_revisions",
   "recipe_notes",
+  // Added in M6 (AC-061: feedback). Older backups simply have none.
+  "recipe_markers",
+  "recipe_made",
 ] as const;
 export type BackupTable = (typeof TABLE_ORDER)[number];
 
@@ -37,9 +40,11 @@ const TABLES = {
   photos,
   recipe_revisions: recipeRevisions,
   recipe_notes: recipeNotes,
+  recipe_markers: recipeMarkers,
+  recipe_made: recipeMade,
 } as const;
 
-const TIMESTAMP_KEYS = new Set(["createdAt", "updatedAt", "deletedAt"]);
+const TIMESTAMP_KEYS = new Set(["createdAt", "updatedAt", "deletedAt", "favoriteAt", "wantToTryAt", "madeAt"]);
 
 const id = z.string().min(1).max(64);
 const ms = z.number().int().nonnegative();
@@ -100,6 +105,8 @@ const ROW_SCHEMAS: Record<BackupTable, z.ZodType> = {
     createdBy: nullableText(64),
   }),
   recipe_notes: z.object({ id, recipeId: id, body: z.string().min(1).max(2_000), createdAt: ms, createdBy: nullableText(64) }),
+  recipe_markers: z.object({ recipeId: id, favoriteAt: ms.nullable(), wantToTryAt: ms.nullable(), updatedAt: ms, updatedBy: nullableText(64) }),
+  recipe_made: z.object({ id, recipeId: id, madeAt: ms, createdBy: nullableText(64) }),
 };
 
 export interface BackupData {
