@@ -7,13 +7,22 @@ import { loadConfig } from "../../server/config";
 import * as schema from "../../server/db/schema";
 import type { MediaStore } from "../../server/adapters/media";
 import type { RecipeAi } from "../../server/core/ai";
-import type { PageFetcher } from "../../server/importers/fetch-page";
+import type { ImageFetcher, PageFetcher } from "../../server/importers/fetch-page";
+import type { PhotoSearchProvider } from "../../server/core/photo-finder";
 
 export const BASE_URL = "http://localhost:5173";
 export const ADMIN_EMAIL = "admin@example.com";
 
 export function createTestServices(
-  options: { media?: MediaStore | null; ai?: RecipeAi; fetchPage?: PageFetcher; env?: Record<string, string> } = {},
+  options: {
+    media?: MediaStore | null;
+    ai?: RecipeAi;
+    fetchPage?: PageFetcher;
+    fetchImage?: ImageFetcher;
+    photoStock?: PhotoSearchProvider | null;
+    photoWeb?: PhotoSearchProvider | null;
+    env?: Record<string, string>;
+  } = {},
 ): Services {
   const sqlite = new Database(":memory:");
   const db = drizzle(sqlite, { schema });
@@ -37,6 +46,10 @@ export function createTestServices(
     ai: options.ai,
     // Tests never reach the network unless they supply a fetcher.
     fetchPage: options.fetchPage ?? (async () => ({ ok: false, message: "No network in tests." })),
+    fetchImage: options.fetchImage ?? (async () => ({ ok: false, message: "No network in tests." })),
+    // Real photo providers are never called in tests.
+    photoStock: options.photoStock ?? null,
+    photoWeb: options.photoWeb ?? null,
   });
 }
 

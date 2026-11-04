@@ -1,10 +1,13 @@
 import { useRef, useState } from "react";
 import { photoUrl, uploadPhoto } from "../photo-prepare";
 import { CameraIcon, CloseIcon, UploadIcon } from "./icons";
+import { FindPhoto } from "./find-photo";
 
 interface Photo {
   id: string;
   caption: string;
+  /** Credit for a found stock or web photo (E1); shown, not editable. */
+  credit?: string | null;
 }
 
 /**
@@ -13,7 +16,16 @@ interface Photo {
  * away; the order and captions are saved with the recipe. Saving a photo never
  * triggers AI analysis (AC-044).
  */
-export function PhotoField({ initial, onBusyChange }: { initial: Photo[]; onBusyChange?: (busy: boolean) => void }) {
+export function PhotoField({
+  initial,
+  onBusyChange,
+  findQuery,
+}: {
+  initial: Photo[];
+  onBusyChange?: (busy: boolean) => void;
+  /** Turns on Find a photo (E1) with the form's current title and source. */
+  findQuery?: () => { title: string; sourceUrl: string; sourceName: string };
+}) {
   const [photos, setPhotos] = useState<Photo[]>(initial);
   const [busy, setBusyCount] = useState(0);
   const setBusy = (update: (n: number) => number) =>
@@ -77,6 +89,7 @@ export function PhotoField({ initial, onBusyChange }: { initial: Photo[]; onBusy
                     setPhotos((current) => current.map((p) => (p.id === photo.id ? { ...p, caption: event.target.value } : p)))
                   }
                 />
+                {photo.credit && <p className="photo-credit">{photo.credit}</p>}
                 <div className="photo-item-actions">
                   <button type="button" className="btn" onClick={() => move(index, -1)} disabled={index === 0} aria-label={`Move photo ${index + 1} earlier`}>
                     ↑
@@ -129,6 +142,13 @@ export function PhotoField({ initial, onBusyChange }: { initial: Photo[]; onBusy
             onChange={(event) => addFiles(event.target.files)}
           />
         </label>
+        {findQuery && (
+          <FindPhoto
+            query={findQuery}
+            onBusyChange={(adding) => setBusy((n) => n + (adding ? 1 : -1))}
+            onAdded={(found) => setPhotos((current) => [...current, { id: found.id, caption: "", credit: found.credit }])}
+          />
+        )}
       </div>
       <p className="hint" aria-live="polite">
         {busy > 0

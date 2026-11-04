@@ -1,8 +1,9 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import type { Database } from "./adapters/db";
 import type { MediaStore } from "./adapters/media";
 import { IMAGE_CONTENT_TYPES, ImageError, cleanImage, type ImageType } from "./core/images";
 import { photos, recipes } from "./db/app-schema";
+import { normalizeCredit } from "./core/photo-finder";
 
 export const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
 export const MAX_THUMB_BYTES = 1024 * 1024;
@@ -11,6 +12,8 @@ export interface StoredPhoto {
   id: string;
   width: number;
   height: number;
+  /** Credit line for a found stock or web photo (E1); null for uploads. */
+  credit: string | null;
 }
 
 export type UploadResult = { ok: true; photo: StoredPhoto } | { ok: false; status: number; message: string };
@@ -28,7 +31,10 @@ export async function storePhoto(
   deps: { db: Database; media: MediaStore | null; newId: () => string; now: () => Date },
   files: { full: Uint8Array; thumb: Uint8Array },
   actor: { userId: string },
+  /** Only for photos chosen with Find a photo (E1). Taken or uploaded photos have none. */
+  credit?: unknown,
 ): Promise<UploadResult> {
+  const creditLine = normalizeCredit(credit);
   if (!deps.media) return { ok: false, status: 503, message: "Photo storage is not configured." };
   if (files.full.length === 0) return { ok: false, status: 400, message: "No photo was received." };
   if (files.full.length > MAX_PHOTO_BYTES) return { ok: false, status: 413, message: "That photo is too large (8 MB maximum)." };
@@ -59,8 +65,9 @@ export async function storePhoto(
     thumbBytes: thumb.bytes.length,
     createdAt: deps.now(),
     createdBy: actor.userId,
+    credit: creditLine,
   });
-  return { ok: true, photo: { id, width: full.width, height: full.height } };
+  return { ok: true, photo: { id, width: full.width, height: full.height, credit: creditLine } };
 }
 
 const PHOTO_PATH = /^\/media\/photos\/([0-9a-f-]{36})(\/thumb)?$/i;
@@ -111,4 +118,12 @@ export async function readPhotoBytes(
   const object = await deps.media.get(photoKey(id.toLowerCase(), row.ext, false));
   if (!object) return null;
   return { bytes: new Uint8Array(await new Response(object.body).arrayBuffer()), contentType: row.contentType };
+}
+
+/** Credit lines for these photos (E1), keyed by id. Photos without a credit are left out. */
+export async function photoCredits(db: Database, ids: string[]): Promise<Record<string, string>> {
+  const list = [...new Set(ids.map((id) => id.toLowerCase()))].filter((id) => /^[0-9a-f-]{36}$/.test(id));
+  if (list.length === 0) return {};
+  const rows = await db.select({ id: photos.id, credit: photos.credit }).from(photos).where(inArray(photos.id, list));
+  return Object.fromEntries(rows.filter((row) => row.credit).map((row) => [row.id, row.credit!]));
 }

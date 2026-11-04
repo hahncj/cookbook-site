@@ -12,7 +12,7 @@ The cookbook keeps three layers of protection. They cover different problems:
 
 Signed in as an admin: footer → **Backup** → **Download full backup**. Your browser downloads `cookbook-backup-YYYY-MM-DD.zip` containing:
 
-- `backup.json`: every recipe and idea (including deleted ones), their full version history, experiment notes, tags, collections, and photo records
+- `backup.json`: every recipe and idea (including deleted ones), their full version history, experiment notes, tags, collections, and photo records (including the credit line of photos found with **Find a photo**)
 - `photos/`: every photo at full size and as a thumbnail
 
 Not included, on purpose: admin sign-ins and AI-tool connections. After a restore you sign in with Google again and reconnect ChatGPT and Claude.ai.

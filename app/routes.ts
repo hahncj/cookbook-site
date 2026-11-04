@@ -13,6 +13,8 @@ export default [
   route("review", "routes/review.tsx"),
   route("settings", "routes/settings.tsx"),
   route("api/photos", "routes/api.photos.ts"),
+  route("api/photos/find", "routes/api.photos.find.ts"),
+  route("api/photos/fetch", "routes/api.photos.fetch.ts"),
   route("api/ai/ingredients", "routes/api.ai.ingredients.ts"),
   route("api/ai/compare", "routes/api.ai.compare.ts"),
   route("api/duplicates", "routes/api.duplicates.ts"),

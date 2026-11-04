@@ -178,7 +178,15 @@ export function EntryForm({
         <FieldError id="description-error" message={errors.description} />
       </div>
 
-      <PhotoField initial={values.photos} onBusyChange={setUploading} />
+      <PhotoField
+        initial={values.photos}
+        onBusyChange={setUploading}
+        findQuery={() => {
+          const form = formRef.current ? new FormData(formRef.current) : null;
+          const field = (name: string, fallback: string) => String(form?.get(name) ?? fallback);
+          return { title: field("title", values.title), sourceUrl: field("sourceUrl", values.sourceUrl), sourceName: field("sourceName", values.sourceName) };
+        }}
+      />
       <FieldError id="photos-error" message={errors.photos} />
 
       <div className="grid-3">

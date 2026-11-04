@@ -5,6 +5,7 @@ import { BackIcon, EditIcon, HistoryIcon } from "../components/icons";
 import { servicesContext } from "../context";
 import { photoUrl } from "../photo-prepare";
 import { useRootData } from "../root";
+import { photoCredits } from "../../server/photos";
 import type { Route } from "./+types/recipe";
 
 export async function loader({ params, context }: Route.LoaderArgs) {
@@ -16,8 +17,8 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   if (schema && entry.photos.length > 0) {
     schema.image = entry.photos.map((photo) => `${services.config.baseUrl}${photoUrl(photo.id)}`);
   }
-  const notes = await services.catalog.listNotes(entry.id);
-  return { entry, notes, schemaJson: schema ? jsonForScriptTag(schema) : null };
+  const [notes, credits] = await Promise.all([services.catalog.listNotes(entry.id), photoCredits(services.db, entry.photos.map((p) => p.id))]);
+  return { entry, notes, credits, schemaJson: schema ? jsonForScriptTag(schema) : null };
 }
 
 // POST: add a dated "notes & experiments" entry (admin only; not a new version).
@@ -55,7 +56,7 @@ function sourceLabel(url: string) {
 }
 
 export default function RecipePage({ loaderData, actionData }: Route.ComponentProps) {
-  const { entry, notes, schemaJson } = loaderData;
+  const { entry, notes, credits, schemaJson } = loaderData;
   const { viewer } = useRootData();
   const navigation = useNavigation();
   const addingNote = navigation.state === "submitting" && navigation.formData?.has("note");
@@ -87,7 +88,12 @@ export default function RecipePage({ loaderData, actionData }: Route.ComponentPr
       {cover && (
         <figure className="recipe-cover">
           <img src={photoUrl(cover.id)} alt={cover.caption || `Photo of ${entry.title}`} />
-          {cover.caption && <figcaption>{cover.caption}</figcaption>}
+          {(cover.caption || credits[cover.id]) && (
+            <figcaption>
+              {cover.caption}
+              {credits[cover.id] && <span className="photo-credit">{credits[cover.id]}</span>}
+            </figcaption>
+          )}
         </figure>
       )}
 
@@ -162,7 +168,12 @@ export default function RecipePage({ loaderData, actionData }: Route.ComponentPr
                   <a href={photoUrl(photo.id)} target="_blank" rel="noopener">
                     <img src={photoUrl(photo.id, "thumb")} alt={photo.caption || `Photo ${index + 2} of ${entry.title}`} loading="lazy" />
                   </a>
-                  {photo.caption && <figcaption>{photo.caption}</figcaption>}
+                  {(photo.caption || credits[photo.id]) && (
+                    <figcaption>
+                      {photo.caption}
+                      {credits[photo.id] && <span className="photo-credit">{credits[photo.id]}</span>}
+                    </figcaption>
+                  )}
                 </figure>
               </li>
             ))}
