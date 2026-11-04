@@ -6,8 +6,8 @@ import type {
   ProfileInput,
   RecipeAi,
   RecipeComparison,
-  RecommendationDraft,
-  RecommendInput,
+  DiscoverInput,
+  DiscoveryDraft,
 } from "../../server/core/ai";
 import type { RecipeDraft } from "../../server/core/imports";
 
@@ -51,15 +51,15 @@ export class FakeAi implements RecipeAi {
 
   /** Set per test; ids come from the test's own recipes. */
   profile: AiResult<{ preferences: InferredPreference[]; note: string | null }> = { ok: true, value: { preferences: [], note: null } };
-  recommendation: AiResult<RecommendationDraft> = { ok: true, value: { saved: [], web: [], note: null, webSources: [] } };
+  discovery: AiResult<DiscoveryDraft> = { ok: true, value: { web: [], written: [], note: null, webSources: [] } };
 
   async inferPreferences(input: ProfileInput) {
     this.calls.push({ method: "inferPreferences", input });
     return this.profile;
   }
-  async recommend(input: RecommendInput) {
-    this.calls.push({ method: "recommend", input });
-    return this.recommendation;
+  async discover(input: DiscoverInput) {
+    this.calls.push({ method: "discover", input });
+    return this.discovery;
   }
   async extractRecipe(input: { text?: string; image?: ImageInput; sourceUrl?: string | null }) {
     this.calls.push({ method: "extractRecipe", input });

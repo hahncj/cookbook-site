@@ -35,40 +35,46 @@ function profile(body) {
 }
 
 /**
- * M7 recommendations. With web tools it pauses once (pause_turn) to exercise
- * the resume loop, returns search and fetch results, and then submits one
- * real web page plus one made-up link the app must drop (AC-034).
+ * M7 "find new recipes". It pauses once (pause_turn) to exercise the resume
+ * loop, returns search and fetch results, and then submits one real web page,
+ * one made-up link the app must drop (AC-034), and one AI-written recipe whose
+ * reason echoes the first confirmed preference (AC-017).
  */
-function recommend(body) {
+function discover(body) {
   const text = userText(body);
-  const cookbook = JSON.parse(between(text, "<cookbook>", "</cookbook>") || "[]");
   const request = between(text, "<request>", "</request>");
   const confirmed = between(text, "Preference profile:", "\n\n")
     .split("\n")
     .filter((line) => line.includes("(confirmed by the owner)"))
     .map((line) => line.replace(/^- /, "").replace(" (confirmed by the owner)", ""));
-  const words = request.toLowerCase().split(/\W+/).filter((w) => w.length > 3);
-  const score = (r) => (words.some((w) => r.title.toLowerCase().includes(w)) ? 10 : 0) + (r.feedback?.favorite ? 2 : 0) + (r.feedback?.wantToTry ? 1 : 0);
-  const ranked = [...cookbook].sort((a, b) => score(b) - score(a)).slice(0, 2);
-  const why = (r) =>
-    [`Fits “${request}”.`, r.feedback?.favorite ? "It's a favorite." : "", confirmed[0] ? `Matches your preference: ${confirmed[0]}.` : ""].filter(Boolean).join(" ");
-  const web = (body.tools ?? []).some((t) => t.name === "web_search");
   const submit = {
     type: "tool_use",
     id: "toolu_submit",
     name: "submit_suggestions",
     input: {
-      saved: [...ranked.map((r) => ({ recipe_id: r.id, reason: why(r) })), { recipe_id: "made-up-id", reason: "Not a real recipe." }],
-      web: web
-        ? [
-            { title: "Miso Glazed Eggplant", url: "https://recipes.e2e.test/miso-eggplant", source_name: "E2E Recipes", reason: "Something new with similar flavors." },
-            { title: "Imaginary Pie", url: "https://invented.e2e.test/pie", source_name: "Nowhere", reason: "Made up." },
-          ]
-        : [],
+      web: [
+        { title: "Miso Glazed Eggplant", url: "https://recipes.e2e.test/miso-eggplant", source_name: "E2E Recipes", reason: "Something new with similar flavors." },
+        { title: "Imaginary Pie", url: "https://invented.e2e.test/pie", source_name: "Nowhere", reason: "Made up." },
+      ],
+      written: [
+        {
+          title: `AI ${request.replace(/\b\w/g, (c) => c.toUpperCase())} Bowl`,
+          description: "A quick bowl built around your request.",
+          servings: "Serves 2",
+          prep_time: "10 min",
+          cook_time: "15 min",
+          ingredients: [
+            { quantity: "200 g", item: "rice noodles" },
+            { quantity: "1 tbsp", item: "soy sauce" },
+          ],
+          steps: ["Soak the noodles.", "Toss with the sauce."],
+          notes: "",
+          reason: [`Fits “${request}”.`, confirmed[0] ? `Matches your preference: ${confirmed[0]}.` : ""].filter(Boolean).join(" "),
+        },
+      ],
       note: "",
     },
   };
-  if (!web) return { content: [submit], stop_reason: "tool_use" };
   const searched = [
     { type: "server_tool_use", id: "srvtoolu_1", name: "web_search", input: { query: request } },
     {
@@ -185,7 +191,7 @@ createServer((req, res) => {
     const body = JSON.parse(raw || "{}");
     res.setHeader("content-type", "application/json");
     const system = String(body.system ?? "");
-    const special = system.includes("decide what to cook") ? recommend(body) : null;
+    const special = system.includes("find NEW recipes") ? discover(body) : null;
     if (special) {
       return res.end(
         JSON.stringify({

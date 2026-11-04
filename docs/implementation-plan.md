@@ -16,7 +16,7 @@ Milestones are implemented one at a time. Each milestone starts only when the ow
 | D6 | Deleting marks a record **inactive**: hidden from the app, kept in the database. No automatic purge; purging can be added later if needed. |
 | D7 | Backups are **manual**: a "Download full backup" button and a matching restore tool. No scheduled backups. D1 Time Travel (7 days on the free plan) is an additional safety net. |
 | D8 | Duplicate detection: **free text similarity on every add/import**, plus an explicit "Check with AI" button. |
-| D9 | Preferences refresh **on request** (button) and **apply immediately**; the owner can view and correct them at any time. They only influence the "Ask AI for suggestions" feature. |
+| D9 | Preferences refresh **on request** (button) and **apply immediately**; the owner can view and correct them at any time. They only influence the "Ask AI for suggestions" feature (now AI mode in the search bar, D19). |
 | D10 | **No search-engine indexing** (noindex + robots.txt). Pages still include schema.org Recipe markup, which Lose It! uses to import recipes from their web page. |
 | D11 | Test on **iPhone Safari, Chrome on iPhone, Home Screen web app, and Android**. |
 | D12 | Old-chat import is **one recipe at a time**. No bulk or chat-export import. |
@@ -26,6 +26,7 @@ Milestones are implemented one at a time. Each milestone starts only when the ow
 | D16 | Use the **Cloudflare Workers free plan**. If measured CPU time exceeds free-plan limits, moving to the paid plan is the owner's decision. **2026-11-03:** measured production CPU exceeds the 10 ms limit (medians 11–34 ms; see M0 status) with no failures observed; the owner chose to **stay on the free plan and watch for errors** (Cloudflare error 1102 / `exceededCpu`). Revisit if failures appear. |
 | D17 | **Visual direction A · Kitchen Notebook** (approved 2026-11-03) with a **viewer-selectable theme**: System default (follows the device), Light, or Dark. Proposed: the choice is remembered on the device for any visitor. Mockups and palettes: [design/m1/](../design/m1/README.md). |
 | D18 | The site is named **540 Kitchen** (2026-11-03), with the owner's logo (source: `design/brand/540-kitchen-logo.png`) in the header and as the browser, Home Screen and app icon. |
+| D19 | **AI mode in the search bar** (2026-11-04): admins get an "AI" toggle on the search bar. With it on, Claude finds **new** recipes only (not ones already in the cookbook), using the preference profile and favorites as extra context. Results include web recipes (with sources) and recipes Claude **writes itself**, labeled "Written by AI · untested". For these written recipes only, the AI may propose amounts (an exception to "AI never invents quantities"). Any result is saved only through the editor and the owner's Save (D2). Replaces the separate "Ask AI" page. |
 
 ## Technology stack
 
@@ -306,30 +307,30 @@ Production after merge: `npm run deploy:ci` applies migration 0007. Then check i
 
 ### M7 — Recommendations and preferences
 
-- "Ask AI" with ranked saved recipes and web discoveries (Claude web search/fetch), labeled with sources and short reasons.
+- "Ask AI" with ranked saved recipes and web discoveries (Claude web search/fetch), labeled with sources and short reasons. **Changed by D19:** AI mode in the search bar finds new recipes only (web and AI-written).
 - Preference profile with evidence, on-request refresh, corrections that persist across refreshes.
 
 **Done when:** AC-015–017, 034, 035 pass.
 
 #### M7 status (2026-11-04, branch `feature/m7-recommendations`)
 
-Verified by automated tests (`npm run check`: 217 unit/integration tests; `npm run test:e2e`: 191 browser checks across phone (Chromium and WebKit), tablet and desktop). Server tests use a fake AI that records every call. Browser tests run the real Claude adapter against the local mock of the Messages API, including web search results, a fetched page and a paused turn.
+Verified by automated tests (`npm run check`: 216 unit/integration tests; `npm run test:e2e`: 191 browser checks across phone (Chromium and WebKit), tablet and desktop). Server tests use a fake AI that records every call. Browser tests run the real Claude adapter against the local mock of the Messages API, including web search results, a fetched page and a paused turn.
 
 | Check | How it was verified |
 | --- | --- |
-| AC-015 | "Ask AI" (admin menu, `/ask`) returns ranked saved recipes and, when "Also look for new recipes on the web" is on, web discoveries found with Claude's web search and web fetch tools. Ranking uses the request, the preference profile and the M6 markers: Favorite and Want to try recipes are sent first and every recipe carries its favorite, want-to-try, made count and days since last made. Each suggestion has a one-sentence reason. Only real, active recipe ids are shown |
-| AC-034 | Each result is labeled "Saved recipe" or "Web discovery". A web discovery links to its source page (new tab), names the site, and says "Page read by AI" or "Seen in search results only". Its link must be one that the web tools actually returned in that request; made-up links are dropped and the page says how many. A web page already saved in the cookbook is shown as the saved recipe instead |
-| D2 | Nothing is saved from Ask AI. "Save to cookbook…" opens the link import with the address filled in; the owner reviews in the editor and presses Save |
+| AC-015 | **AI mode in the search bar** (admins only, D19): with "AI" on, the request goes to Claude with web search and web fetch, plus the preference profile, favorite and often-made titles as taste context, and the cookbook's titles so results are new. It returns up to 4 web recipes and up to 3 recipes Claude wrote itself, each with a one-sentence reason. Saved-recipe matching is left to the normal search (AI off) |
+| AC-034 | Web results are labeled "From the web", link to their source page (new tab), name the site, and say "Page read by AI" or "Seen in search results only". A link must be one the web tools actually returned in that request; made-up links are dropped and the page says how many. A page already saved shows "Already in your cookbook". AI-written recipes are labeled "Written by AI · untested" and have no source link |
+| D2 | Nothing is saved from the results. "Save to cookbook…" opens link import with the address filled in (web) or the editor filled with the recipe (written, origin "ai", source "Written by AI (Claude)"); the owner reviews and presses Save |
 | AC-016 | "Refresh from my recipes" on Preferences (`/preferences`) asks Claude for patterns in the catalog and markers. Each suggestion lists the recipes behind it (links). Suggestions without real evidence, and any about allergies, intolerances or medical or dietary restrictions, are dropped. With fewer than 8 recipes the profile says it is a rough guess. The profile changes only when refreshed (D9) |
-| AC-017 | The owner can mark a suggestion right, correct its wording, reject it ("Not true"), delete their own, or add their own. Corrections are used by the next Ask AI request: confirmed and own items as firm preferences, unreviewed suggestions as hints, rejected ones as "not true" |
+| AC-017 | The owner can mark a suggestion right, correct its wording, reject it ("Not true"), delete their own, or add their own. Corrections are used by the next AI-mode search: confirmed and own items as firm preferences, unreviewed suggestions as hints, rejected ones as "not true" |
 | AC-035 | A refresh replaces only unreviewed suggestions. Rejected and corrected inferences are kept with the AI's original wording, sent to Claude as "don't suggest", and any new inference that says the same thing is dropped. "Allow again" forgets a rejection |
-| AC-066, AC-067 | Signed-out (401) and non-admin (403) requests to Ask AI and to every Preferences change are refused before any Claude call (the fake records zero calls). The Ask AI page sends visitors to sign in. The profile itself is public to read (D3) |
-| AC-036 | Without an API key both pages say AI isn't set up; nothing else changes |
+| AC-066, AC-067 | Signed-out (401) and non-admin (403) requests to AI mode (`/discover`), to opening an AI-written recipe in the editor, and to every Preferences change are refused before any Claude call (the fake records zero calls). Visitors and non-admins don't see the AI toggle. The profile itself is public to read (D3) |
+| AC-036 | Without an API key AI mode and Preferences say AI isn't set up; normal search is unchanged |
 | AC-061 (preferences) | Backups include the new `preferences` and `preference_refreshes` tables (migration 0008) and restore them; older backups without them still restore |
 
-Proposed defaults (not owner decisions): web search is on by default for each request and limited to 4 searches and 3 page reads; at most 6–8 saved and 3–5 web suggestions; the request is temporary and the hint points to Preferences for anything permanent (instead of a "save as preference" button); the profile page shows rejected items under "Not true" (the profile is public, D3); recipes sent to Claude are capped at 300 (marked ones first, then newest), with ingredient names but no amounts, notes or photos.
+Proposed defaults (not owner decisions): each AI-mode request uses at most 4 web searches and 3 page reads; Claude is asked for up to 3 web recipes and 1–2 of its own; the request is temporary (anything permanent goes on Preferences); AI mode turns off when you leave the results page; the profile page shows rejected items under "Not true" (the profile is public, D3); for a profile refresh, recipes sent to Claude are capped at 300 (marked ones first, then newest), with ingredient names but no amounts, notes or photos; AI mode sends only titles, not recipe contents.
 
-Expected cost per request (Claude Opus 5.5 at $4 / $20 per million input / output tokens, web search $10 per 1,000 searches): for a catalog of around 100 recipes (about 7,000 input tokens), a profile refresh or an Ask without the web is estimated at 5–10 cents, mostly output and thinking tokens. An Ask with the web is estimated at 20–50 cents: Claude re-reads the growing conversation after each search or page read, plus 1 cent per search. These are estimates, not measurements; confirm them against real usage in M8 (the Anthropic Console shows the cost per request).
+Expected cost per request (Claude Opus 5.5 at $4 / $20 per million input / output tokens, web search $10 per 1,000 searches): for a catalog of around 100 recipes (about 7,000 input tokens), a profile refresh is estimated at 5–10 cents, mostly output and thinking tokens. An AI-mode search is estimated at 20–50 cents: Claude re-reads the growing conversation after each search or page read, writes one or two full recipes, and pays 1 cent per search. These are estimates, not measurements; confirm them against real usage in M8 (the Anthropic Console shows the cost per request).
 
 Also verified: the Cloudflare build compiles, and all migrations through 0008 apply in order to a local D1 database. Not verified: a real Claude request with web search (the live smoke test costs money and was not run).
 

@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type Anthropic from "@anthropic-ai/sdk";
 import { createRouterContext } from "../../app/context";
-import { action as askAction, loader as askLoader } from "../../app/routes/ask";
+import { action as discoverAction, loader as discoverLoader } from "../../app/routes/discover";
 import { action as prefsAction, loader as prefsLoader } from "../../app/routes/preferences";
-import { loader as importLoader } from "../../app/routes/recipe-import";
+import { action as importAction, loader as importLoader } from "../../app/routes/recipe-import";
 import type { Services } from "../../server/app";
 import { collectWebSources, createAnthropicAi } from "../../server/ai/anthropic";
 import { exportBackupData, importRows, TABLE_ORDER } from "../../server/backup";
-import type { RecommendInput, WebSourceSeen } from "../../server/core/ai";
+import type { DiscoverInput, WebSourceSeen } from "../../server/core/ai";
 import { buildDigests, sameStatement } from "../../server/core/preferences";
-import { normalizeUrl } from "../../server/core/recommendations";
+import { normalizeUrl } from "../../server/core/discover";
 import { validateEntry } from "../../server/core/recipes";
 import { FakeAi } from "../helpers/fake-ai";
 import { ADMIN_EMAIL, BASE_URL, createTestServices, sessionCookieFor } from "../helpers/services";
@@ -70,16 +70,17 @@ async function createRecipe(title: string, items: string[] = [], extra: { source
   return created.id;
 }
 
-const recommendInput = () => ai.calls.find((c) => c.method === "recommend")?.input as RecommendInput;
+const discoverInput = () => ai.calls.find((c) => c.method === "discover")?.input as DiscoverInput;
 
 describe("paid AI is admin-only, checked before any Claude call (AC-066, AC-067)", () => {
-  it("Ask AI: the page sends visitors to sign in, refuses non-admins, and the request refuses both without calling Claude", async () => {
+  it("AI mode: the page sends visitors to sign in, refuses non-admins, and the request refuses both without calling Claude", async () => {
     await createRecipe("Noodles");
     const viewer = await sessionCookieFor(services, "someone@example.com");
-    expect((await run(askLoader(args(req("/ask"))))).status).toBe(302);
-    expect((await run(askLoader(args(req("/ask", { cookie: viewer }))))).status).toBe(403);
-    expect((await run(askAction(args(post("/ask", { question: "dinner", web: "on" }))))).status).toBe(401);
-    expect((await run(askAction(args(post("/ask", { question: "dinner", web: "on" }, viewer))))).status).toBe(403);
+    expect((await run(discoverLoader(args(req("/discover"))))).status).toBe(302);
+    expect((await run(discoverLoader(args(req("/discover", { cookie: viewer }))))).status).toBe(403);
+    expect((await run(discoverAction(args(post("/discover", { q: "dinner" }))))).status).toBe(401);
+    expect((await run(discoverAction(args(post("/discover", { q: "dinner" }, viewer))))).status).toBe(403);
+    expect((await run(importAction(args(post("/recipes/import", { intent: "written", draft: "{}" }, viewer))))).status).toBe(403);
     expect(ai.calls).toHaveLength(0);
   });
 
@@ -102,7 +103,7 @@ describe("paid AI is admin-only, checked before any Claude call (AC-066, AC-067)
     services = createTestServices();
     admin = await sessionCookieFor(services, ADMIN_EMAIL);
     await createRecipe("Noodles");
-    const ask = await run(askAction(args(post("/ask", { question: "dinner" }, admin))));
+    const ask = await run(discoverAction(args(post("/discover", { q: "dinner" }, admin))));
     expect(ask.status).toBe(503);
     expect(ask.body.error).toMatch(/aren't set up/);
     const refresh = await run(prefsAction(args(post("/preferences", { intent: "refresh" }, admin))));
@@ -202,9 +203,9 @@ describe("preference profile (AC-016, AC-017, AC-035)", () => {
       ["We like dinners under 45 minutes", null, "owner"],
     ]);
 
-    // Later recommendations use the correction, and treat the rejection as not true (AC-017).
-    await run(askAction(args(post("/ask", { question: "dinner" }, admin))));
-    const input = recommendInput();
+    // Later AI searches use the correction, and treat the rejection as not true (AC-017).
+    await run(discoverAction(args(post("/discover", { q: "dinner" }, admin))));
+    const input = discoverInput();
     expect(input.preferences).toEqual([
       { statement: "Likes mild Korean flavors, not too spicy", confirmed: true },
       { statement: "Likes Japanese soups", confirmed: true },
@@ -248,93 +249,113 @@ describe("preference profile (AC-016, AC-017, AC-035)", () => {
   });
 });
 
-describe("Ask AI (AC-015, AC-034)", () => {
-  it("returns ranked saved recipes and verified web discoveries, labeled, with sources and reasons", async () => {
+describe("AI mode finds new recipes (AC-015, AC-034, D19)", () => {
+  const written = {
+    title: "Charred Leek Toast",
+    description: "Smoky leeks on toast.",
+    servings: "Serves 2",
+    prepTime: "10 min",
+    cookTime: "15 min",
+    ingredients: [
+      { quantity: "2", item: "leeks" },
+      { quantity: "", item: "" },
+    ],
+    steps: ["Char the leeks.", " ", "Pile on toast."],
+    notes: "",
+    reason: "Uses what you like.",
+  };
+
+  it("returns verified web recipes and AI-written ones, labeled, using the profile and favorites as context", async () => {
     const noodles = await createRecipe("Gochujang Noodles", ["gochujang"]);
     const chili = await createRecipe("Bean Chili", ["beans"]);
-    const saved = await createRecipe("Saved Eggplant", ["eggplant"], { sourceUrl: "https://www.example.com/eggplant/" });
-    await services.markers.apply(chili, "want_on", actor);
-    const sources: WebSourceSeen[] = [
-      { url: "https://recipes.example.org/miso", title: "Miso Glazed Eggplant", read: true },
-      { url: "https://recipes.example.org/soup", title: "Soup", read: false },
-      { url: "https://example.com/eggplant", title: "Eggplant", read: false },
-    ];
-    ai.recommendation = {
+    await createRecipe("Saved Eggplant", ["eggplant"], { sourceUrl: "https://www.example.com/eggplant/" });
+    await services.markers.apply(noodles, "favorite_on", actor);
+    await services.markers.apply(chili, "made_add", actor);
+    await services.preferences.add("We like dinners under 45 minutes", actor);
+    const saved = (await services.catalog.digestSources()).find((s) => s.title === "Saved Eggplant")!.id;
+    ai.discovery = {
       ok: true,
       value: {
-        saved: [
-          { recipeId: chili, reason: "On your want-to-try list." },
-          { recipeId: "invented", reason: "Not real." },
-          { recipeId: noodles, reason: "A favorite flavor." },
-          { recipeId: chili, reason: "Duplicate." },
-        ],
         web: [
           { title: "Miso Glazed Eggplant", url: "https://recipes.example.org/miso#top", sourceName: "Example Recipes", reason: "Similar flavors." },
           { title: "Soup", url: "https://recipes.example.org/soup", sourceName: "", reason: "Warming." },
           { title: "Made up", url: "https://nowhere.example.net/pie", sourceName: "Nowhere", reason: "Invented." },
           { title: "Bad", url: "javascript:alert(1)", sourceName: "x", reason: "x" },
-          { title: "Already saved", url: "http://example.com/eggplant", sourceName: "Example", reason: "You saved this one." },
+          { title: "Your eggplant", url: "http://example.com/eggplant", sourceName: "Example", reason: "Saved before." },
         ],
-        note: "Nothing saved is very quick.",
-        webSources: sources,
+        written: [written, { ...written, title: "No steps", steps: [] }],
+        note: "Leeks are in season.",
+        webSources: [
+          { url: "https://recipes.example.org/miso", title: "Miso Glazed Eggplant", read: true },
+          { url: "https://recipes.example.org/soup", title: "Soup", read: false },
+          { url: "https://example.com/eggplant", title: "Eggplant", read: false },
+        ],
       },
     };
-    const response = await run(askAction(args(post("/ask", { question: "  something warming  ", web: "on" }, admin))));
+    const response = await run(discoverAction(args(post("/discover", { q: "  something warming  " }, admin))));
     expect(response.status).toBe(200);
     const result = response.body.result;
-    expect(result.saved).toEqual([
-      { kind: "saved", recipeId: chili, title: "Bean Chili", reason: "On your want-to-try list.", feedback: { favorite: false, wantToTry: true, madeCount: 0 } },
-      { kind: "saved", recipeId: noodles, title: "Gochujang Noodles", reason: "A favorite flavor.", feedback: null },
-      { kind: "saved", recipeId: saved, title: "Saved Eggplant", reason: "You saved this one.", feedback: null },
-    ]);
+    expect(result.request).toBe("something warming");
     expect(result.web).toEqual([
-      { kind: "web", title: "Miso Glazed Eggplant", url: "https://recipes.example.org/miso", sourceName: "Example Recipes", reason: "Similar flavors.", pageRead: true },
-      { kind: "web", title: "Soup", url: "https://recipes.example.org/soup", sourceName: "recipes.example.org", reason: "Warming.", pageRead: false },
+      { kind: "web", title: "Miso Glazed Eggplant", url: "https://recipes.example.org/miso", sourceName: "Example Recipes", reason: "Similar flavors.", pageRead: true, savedRecipeId: null },
+      { kind: "web", title: "Soup", url: "https://recipes.example.org/soup", sourceName: "recipes.example.org", reason: "Warming.", pageRead: false, savedRecipeId: null },
+      { kind: "web", title: "Your eggplant", url: "https://example.com/eggplant", sourceName: "Example", reason: "Saved before.", pageRead: false, savedRecipeId: saved },
     ]);
     expect(result.droppedUnverified).toBe(2);
-    expect(result.note).toBe("Nothing saved is very quick.");
-
-    const input = recommendInput();
-    expect(input.question).toBe("something warming");
-    expect(input.includeWeb).toBe(true);
-    // Want-to-try recipes lead the material; markers travel as feedback.
-    expect(input.recipes[0]).toMatchObject({ id: chili, feedback: { wantToTry: true } });
-  });
-
-  it("without the web option, web suggestions are never shown", async () => {
-    const id = await createRecipe("Noodles");
-    ai.recommendation = {
-      ok: true,
-      value: {
-        saved: [{ recipeId: id, reason: "Quick." }],
-        web: [{ title: "X", url: "https://a.example/x", sourceName: "A", reason: "x" }],
-        note: null,
-        webSources: [{ url: "https://a.example/x", title: "X", read: true }],
+    // Incomplete written recipes are dropped; blank rows and steps are tidied.
+    expect(result.written).toEqual([
+      {
+        kind: "written",
+        title: "Charred Leek Toast",
+        description: "Smoky leeks on toast.",
+        yieldText: "Serves 2",
+        prepTime: "10 min",
+        cookTime: "15 min",
+        ingredients: [{ quantity: "2", item: "leeks" }],
+        steps: ["Char the leeks.", "Pile on toast."],
+        notes: null,
+        reason: "Uses what you like.",
       },
-    };
-    const response = await run(askAction(args(post("/ask", { question: "" }, admin))));
-    expect(response.body.result.web).toEqual([]);
-    expect(recommendInput()).toMatchObject({ includeWeb: false, question: "What should I cook next?" });
+    ]);
+    expect(result.note).toBe("Leeks are in season.");
+
+    const input = discoverInput();
+    expect(input.request).toBe("something warming");
+    expect(input.preferences).toEqual([{ statement: "We like dinners under 45 minutes", confirmed: true }]);
+    // Favorites (and often-made recipes) add taste context; saved titles are listed so results are new.
+    expect(input.favorites).toEqual(["Gochujang Noodles"]);
+    expect([...input.cookbookTitles].sort()).toEqual(["Bean Chili", "Gochujang Noodles", "Saved Eggplant"]);
   });
 
-  it("explains an empty cookbook, a long request and AI errors, keeping the request", async () => {
-    let response = await run(askAction(args(post("/ask", { question: "dinner" }, admin))));
+  it("explains an empty or long request and AI errors, keeping the request", async () => {
+    let response = await run(discoverAction(args(post("/discover", { q: "  " }, admin))));
     expect(response.status).toBe(422);
-    expect(response.body).toMatchObject({ ok: false, question: "dinner", includeWeb: false });
-    await createRecipe("Noodles");
-    response = await run(askAction(args(post("/ask", { question: "x".repeat(501) }, admin))));
+    response = await run(discoverAction(args(post("/discover", { q: "x".repeat(501) }, admin))));
     expect(response.status).toBe(422);
     expect(ai.calls).toHaveLength(0);
-    ai.recommendation = { ok: false, reason: "failed", message: "The AI service is busy right now." };
-    response = await run(askAction(args(post("/ask", { question: "dinner", web: "on" }, admin))));
-    expect(response).toMatchObject({ status: 502, body: { ok: false, error: "The AI service is busy right now.", question: "dinner", includeWeb: true } });
+    // Works with an empty cookbook too: it only looks for new recipes.
+    ai.discovery = { ok: false, reason: "failed", message: "The AI service is busy right now." };
+    response = await run(discoverAction(args(post("/discover", { q: "dinner" }, admin))));
+    expect(response).toMatchObject({ status: 502, body: { ok: false, error: "The AI service is busy right now.", request: "dinner" } });
   });
 
-  it("'Save to cookbook' opens the link import with the page filled in (D2)", async () => {
+  it("'Save to cookbook' opens the editor: web links via link import, AI-written recipes filled in and labeled (D2)", async () => {
     const page = await run(importLoader(args(req("/recipes/import?url=https%3A%2F%2Frecipes.example.org%2Fmiso", { cookie: admin }))));
     expect(page.body.prefillUrl).toBe("https://recipes.example.org/miso");
     const bad = await run(importLoader(args(req("/recipes/import?url=javascript%3Aalert(1)", { cookie: admin }))));
     expect(bad.body.prefillUrl).toBe("");
+
+    const draft = { ...written, yieldText: "Serves 2", description: "Smoky leeks on toast.", notes: null, ingredients: [{ quantity: "2", item: "leeks" }], steps: ["Char the leeks."] };
+    const review = await run(importAction(args(post("/recipes/import", { intent: "written", draft: JSON.stringify(draft) }, admin))));
+    expect(review.status).toBe(200);
+    expect(review.body).toMatchObject({
+      stage: "review",
+      method: "written",
+      values: { title: "Charred Leek Toast", yieldText: "Serves 2", ingredients: [{ quantity: "2", item: "leeks" }], steps: "Char the leeks.", origin: "ai", sourceName: "Written by AI (Claude)" },
+    });
+    expect(await services.catalog.digestSources()).toHaveLength(0); // nothing saved yet
+    expect((await run(importAction(args(post("/recipes/import", { intent: "written", draft: "{not json" }, admin))))).status).toBe(422);
+    expect(ai.calls).toHaveLength(0);
   });
 });
 
@@ -376,7 +397,7 @@ describe("helpers", () => {
   });
 });
 
-describe("Claude adapter for Ask AI", () => {
+describe("Claude adapter for AI mode", () => {
   function fakeClient(replies: Partial<Anthropic.Beta.BetaMessage>[]) {
     const requests: Anthropic.Beta.MessageCreateParams[] = [];
     const client = {
@@ -393,19 +414,35 @@ describe("Claude adapter for Ask AI", () => {
     } as unknown as Anthropic;
     return { client, requests };
   }
-  const input: RecommendInput = {
-    question: "dinner",
-    recipes: [{ id: "r1", kind: "recipe", title: "Noodles", description: null, tags: [], ingredients: ["noodles"], prepTime: null, cookTime: null, feedback: null }],
+  const input: DiscoverInput = {
+    request: "dinner",
     preferences: [{ statement: "Likes noodles", confirmed: true }],
     rejected: ["Hates rice"],
-    includeWeb: true,
+    favorites: ["Gochujang Noodles"],
+    cookbookTitles: ["Gochujang Noodles", "Bean Chili"],
     today: "2026-11-04",
   };
   const submit = {
     type: "tool_use",
     id: "t",
     name: "submit_suggestions",
-    input: { saved: [{ recipe_id: "r1", reason: "Quick." }], web: [{ title: "P", url: "https://found.example/a", source_name: "F", reason: "New." }], note: "" },
+    input: {
+      web: [{ title: "P", url: "https://found.example/a", source_name: "F", reason: "New." }],
+      written: [
+        {
+          title: "W",
+          description: "",
+          servings: "Serves 2",
+          prep_time: "",
+          cook_time: "",
+          ingredients: [{ quantity: "1", item: "egg" }],
+          steps: ["Cook."],
+          notes: "",
+          reason: "Quick.",
+        },
+      ],
+      note: "",
+    },
   };
 
   it("resumes a paused turn, keeps the web results, and reads the submitted answer", async () => {
@@ -413,12 +450,14 @@ describe("Claude adapter for Ask AI", () => {
       { stop_reason: "pause_turn", content: [{ type: "web_search_tool_result", tool_use_id: "s", content: [{ type: "web_search_result", url: "https://found.example/a", title: "F" }] }] as never },
       { stop_reason: "tool_use", content: [submit] as never },
     ]);
-    const result = await createAnthropicAi({ apiKey: "k", client }).recommend(input);
+    const result = await createAnthropicAi({ apiKey: "k", client }).discover(input);
     expect(result).toEqual({
       ok: true,
       value: {
-        saved: [{ recipeId: "r1", reason: "Quick." }],
         web: [{ title: "P", url: "https://found.example/a", sourceName: "F", reason: "New." }],
+        written: [
+          { title: "W", description: "", servings: "Serves 2", prepTime: "", cookTime: "", ingredients: [{ quantity: "1", item: "egg" }], steps: ["Cook."], notes: "", reason: "Quick." },
+        ],
         note: null,
         webSources: [{ url: "https://found.example/a", title: "F", read: false }],
       },
@@ -430,22 +469,22 @@ describe("Claude adapter for Ask AI", () => {
     const prompt = JSON.stringify(requests[0]!.messages);
     expect(prompt).toContain("Likes noodles (confirmed by the owner)");
     expect(prompt).toContain("Hates rice");
+    expect(prompt).toContain("Gochujang Noodles");
   });
 
-  it("asks once more when the model stops without submitting, and leaves out web tools when not wanted", async () => {
+  it("asks once more when the model stops without submitting", async () => {
     const { client, requests } = fakeClient([
       { stop_reason: "end_turn", content: [{ type: "text", text: "Try noodles." }] as never },
       { stop_reason: "tool_use", content: [submit] as never },
     ]);
-    const result = await createAnthropicAi({ apiKey: "k", client }).recommend({ ...input, includeWeb: false });
+    const result = await createAnthropicAi({ apiKey: "k", client }).discover(input);
     expect(result.ok).toBe(true);
-    expect(requests[0]!.tools!.map((t) => (t as { name?: string }).name)).toEqual(["submit_suggestions"]);
     expect(requests[1]!.messages.at(-1)).toMatchObject({ role: "user" });
   });
 
   it("reports a refusal plainly", async () => {
     const { client } = fakeClient([{ stop_reason: "refusal", content: [] }]);
-    expect(await createAnthropicAi({ apiKey: "k", client }).recommend(input)).toMatchObject({ ok: false, reason: "refused" });
+    expect(await createAnthropicAi({ apiKey: "k", client }).discover(input)).toMatchObject({ ok: false, reason: "refused" });
   });
 });
 
