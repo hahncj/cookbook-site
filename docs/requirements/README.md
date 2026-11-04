@@ -16,6 +16,7 @@ Start here, then read the linked files. Keep the requirements split by purpose r
 | [Acceptance criteria](04-acceptance-criteria.md) | Observable checks for implementation and review |
 | [Development handoff](05-development-handoff.md) | Build guidance, open decisions, and delivery expectations |
 | [Lose It! integration](06-lose-it-integration.md) | Integration research, limitations, and validation plan |
+| [Enhancements](07-enhancements.md) | Owner-requested improvements after first release (E1–E4) |
 
 ## Latest confirmed decisions
 
