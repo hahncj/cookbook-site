@@ -18,11 +18,11 @@ const envSchema = z.object({
   // Only for a gateway/proxy, or the browser tests' mock. Leave unset normally.
   ANTHROPIC_BASE_URL: z.url().optional(),
   // Find a photo (E1). Each source is optional: off when its key is unset.
-  // Pexels: free stock photos. Brave Search: general web image search.
-  PEXELS_API_KEY: z.string().optional(),
+  // Pixabay: free stock photos. Brave Search: general web image search.
+  PIXABAY_API_KEY: z.string().optional(),
   BRAVE_SEARCH_API_KEY: z.string().optional(),
   // Only for the browser tests' mock. Leave unset normally.
-  PEXELS_BASE_URL: z.url().optional(),
+  PIXABAY_BASE_URL: z.url().optional(),
   BRAVE_SEARCH_BASE_URL: z.url().optional(),
 });
 
@@ -40,7 +40,7 @@ export interface AppConfig {
   anthropic: { apiKey: string; model: string | null; baseUrl: string | null } | null;
   /** Photo search sources (E1); each is null when its key is unset. */
   photoSearch: {
-    pexels: { apiKey: string; baseUrl: string | null } | null;
+    pixabay: { apiKey: string; baseUrl: string | null } | null;
     brave: { apiKey: string; baseUrl: string | null } | null;
   };
 }
@@ -63,7 +63,7 @@ export function loadConfig(env: Record<string, unknown>, host: AppConfig["host"]
       ? { apiKey: values.ANTHROPIC_API_KEY.trim(), model: values.ANTHROPIC_MODEL?.trim() || null, baseUrl: values.ANTHROPIC_BASE_URL ?? null }
       : null,
     photoSearch: {
-      pexels: values.PEXELS_API_KEY?.trim() ? { apiKey: values.PEXELS_API_KEY.trim(), baseUrl: values.PEXELS_BASE_URL ?? null } : null,
+      pixabay: values.PIXABAY_API_KEY?.trim() ? { apiKey: values.PIXABAY_API_KEY.trim(), baseUrl: values.PIXABAY_BASE_URL ?? null } : null,
       brave: values.BRAVE_SEARCH_API_KEY?.trim()
         ? { apiKey: values.BRAVE_SEARCH_API_KEY.trim(), baseUrl: values.BRAVE_SEARCH_BASE_URL ?? null }
         : null,

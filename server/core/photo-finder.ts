@@ -11,7 +11,7 @@ export interface PhotoCandidate {
   /** Smaller image for the picker. */
   previewUrl: string;
   source: PhotoSourceKind;
-  /** Saved with the photo and shown under it, e.g. "Photo: Jane Doe / Pexels". */
+  /** Saved with the photo and shown under it, e.g. "Photo: Jane Doe / Pixabay". */
   credit: string;
   /** The page the photo is on, so the admin can check it. */
   pageUrl: string | null;
@@ -29,7 +29,7 @@ export type FinderPageFetcher = (url: string) => Promise<{ ok: true; url: string
 
 export interface PhotoFinderDeps {
   fetchPage: FinderPageFetcher;
-  /** Free stock photos (Pexels); null when not set up. */
+  /** Free stock photos (Pixabay); null when not set up. */
   stock: PhotoSearchProvider | null;
   /** General web image search (Brave); null when not set up. */
   web: PhotoSearchProvider | null;
@@ -118,7 +118,7 @@ export function pageCredit(pageUrl: string, sourceName: string | null): string {
   return creditLine(name);
 }
 
-/** "Photo: Jane Doe / Pexels". Trimmed to fit storage. */
+/** "Photo: Jane Doe / Pixabay". Trimmed to fit storage. */
 export function creditLine(by: string, site?: string): string {
   const text = `Photo: ${by.replace(/\s+/g, " ").trim()}${site ? ` / ${site}` : ""}`;
   return text.slice(0, MAX_CREDIT);

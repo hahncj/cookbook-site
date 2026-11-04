@@ -17,7 +17,7 @@ import { notConfigured, type RecipeAi } from "./core/ai";
 import { createAnthropicAi } from "./ai/anthropic";
 import { createImageFetcher, createPageFetcher, type ImageFetcher, type PageFetcher } from "./importers/fetch-page";
 import { createPhotoFinder, type PhotoFinder, type PhotoSearchProvider } from "./core/photo-finder";
-import { createBraveImageSearch, createPexelsSearch } from "./importers/photo-search";
+import { createBraveImageSearch, createPixabaySearch } from "./importers/photo-search";
 
 /** Everything a request handler may use. Built per request by the host adapter. */
 export interface Services {
@@ -57,7 +57,7 @@ export function createServices(deps: HostDeps): Services {
   const now = () => new Date();
   const catalog = createCatalog({ repo: createCatalogRepository(deps.db, newId), now, newId });
   const fetchPage = deps.fetchPage ?? createPageFetcher();
-  const { pexels, brave } = deps.config.photoSearch;
+  const { pixabay, brave } = deps.config.photoSearch;
   return {
     config: deps.config,
     db: deps.db,
@@ -77,7 +77,7 @@ export function createServices(deps: HostDeps): Services {
     fetchPage,
     photoFinder: createPhotoFinder({
       fetchPage,
-      stock: deps.photoStock !== undefined ? deps.photoStock : pexels ? createPexelsSearch(pexels) : null,
+      stock: deps.photoStock !== undefined ? deps.photoStock : pixabay ? createPixabaySearch(pixabay) : null,
       web: deps.photoWeb !== undefined ? deps.photoWeb : brave ? createBraveImageSearch(brave) : null,
     }),
     fetchImage: deps.fetchImage ?? createImageFetcher(),
