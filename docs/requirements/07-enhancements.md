@@ -79,3 +79,12 @@ Should Backup and Deleted recipes live in Settings for admins?
 - Yes: add an **Admin tools** section to Settings (admins only) with links to **Backup** and **Deleted recipes**.
 - Keep those as their own pages, so existing links and tests still work. Only where you reach them from changes.
 - Remove them from the footer.
+
+## Status
+
+| Item | Status | Notes |
+| --- | --- | --- |
+| E1 | In progress | Built separately. |
+| E2 | Built 2026-11-04, awaiting review | **Sign in** sits at the right of the top bar and goes straight to Google, returning to the same page. Signed in, the spot shows the Google picture (name too on screens 600px and wider, first letter if no picture) and opens a menu: name and email, Settings, Sign out. Better Auth already saves Google's picture as `user.image`; it is now refreshed on every sign-in (`overrideUserInfoOnSignIn`). `/sign-in` stays for AI tool connections, retitled **Sign in**. |
+| E3 | Built 2026-11-04, awaiting review | `/settings` is open to everyone. Visitors see Appearance only; admins also see the admin sections, whose actions still refuse signed-out (401) and non-admin (403) requests. Visitors reach it from a gear in the top bar. The footer is gone, since nothing was left in it. |
+| E4 | Built 2026-11-04, awaiting review | **Admin tools** section in Settings links to Backup and Deleted recipes. Both pages are unchanged. |

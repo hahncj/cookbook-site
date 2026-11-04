@@ -50,7 +50,6 @@ describe("review and settings are admin-only (AC-029, AC-064)", () => {
   it("rejects signed-out and non-admin requests", async () => {
     const someone = await sessionCookieFor(services, "someone@example.com");
     expect(await status(reviewLoader(args(get("/review"))))).toBe(302);
-    expect(await status(settingsLoader(args(get("/settings"))))).toBe(302);
     for (const [cookie, code] of [[undefined, 401], [someone, 403]] as const) {
       expect(await status(reviewAction(args(post("/review", { intent: "approve", id: "x" }, cookie))))).toBe(code);
       expect(await status(settingsAction(args(post("/settings", { intent: "approval", required: "false" }, cookie))))).toBe(code);
@@ -58,13 +57,26 @@ describe("review and settings are admin-only (AC-029, AC-064)", () => {
     }
     expect(await services.submissions.approvalRequired()).toBe(true);
   });
+
+  it("Settings opens for everyone, but only admins get the admin sections (E3, E4)", async () => {
+    const someone = await sessionCookieFor(services, "someone@example.com");
+    await createKeyViaPage("Secret script");
+    for (const cookie of [undefined, someone]) {
+      const page = await settingsLoader(args(get("/settings", cookie)));
+      expect(page).toEqual({ admin: null });
+      expect(JSON.stringify(page)).not.toContain("Secret script");
+    }
+    const page = await settingsLoader(args(get("/settings", admin)));
+    expect(page.admin).toMatchObject({ approvalRequired: true, mcpUrl: `${BASE_URL}/mcp` });
+    expect(page.admin!.keys).toHaveLength(1);
+  });
 });
 
 describe("admin pages", () => {
   it("creates an API key that works once, shows it once, and revokes it", async () => {
     const key = await createKeyViaPage("Claude Code");
     expect(key).toMatch(/^ck_[A-Za-z0-9_-]{43}$/);
-    const page = await settingsLoader(args(get("/settings", admin)));
+    const page = (await settingsLoader(args(get("/settings", admin)))).admin!;
     expect(page.keys).toEqual([expect.objectContaining({ name: "Claude Code", prefix: key.slice(0, 10) })]);
     expect(JSON.stringify(page)).not.toContain(key); // never shown again
     expect((await request(services, "/api/v1/recipes", { headers: { Authorization: `Bearer ${key}` } })).status).toBe(200);

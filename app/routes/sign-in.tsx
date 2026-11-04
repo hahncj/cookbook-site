@@ -38,7 +38,7 @@ export default function SignIn() {
 
   return (
     <div className="narrow">
-      <h1>Admin sign-in</h1>
+      <h1>Sign in</h1>
       <p className="muted">Only the cookbook's admin Google accounts can sign in. Anyone can browse without signing in.</p>
       <button type="button" className="btn btn-primary btn-block" onClick={signIn} disabled={pending}>
         {pending ? "Redirecting to Google…" : "Sign in with Google"}

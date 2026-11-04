@@ -86,6 +86,23 @@ setup("seed sample recipes and an admin session", async () => {
   const session = await ctx.internalAdapter.createSession(userId);
   const cookie = (await serializeSignedCookie("better-auth.session_token", session.token, ctx.secret)).split(";")[0]!;
   const [name, ...rest] = cookie.split("=");
+
+  // A signed-in non-admin with a profile picture (E2). The admin gate stops
+  // this at Google sign-in today; it stands in for someone later removed from
+  // the allow-list.
+  const viewerId = crypto.randomUUID();
+  await db.insert(schema.user).values({
+    id: viewerId,
+    email: "pat@example.com",
+    name: "Pat Example",
+    image: `${E2E.baseURL}/brand/logo-96.png`,
+    emailVerified: true,
+    createdAt: now,
+    updatedAt: now,
+  });
+  const viewerSession = await ctx.internalAdapter.createSession(viewerId);
+  const viewerCookie = (await serializeSignedCookie("better-auth.session_token", viewerSession.token, ctx.secret)).split(";")[0]!;
+  const [viewerName, ...viewerRest] = viewerCookie.split("=");
   sqlite.close();
 
   // The empty second instance (backup restore target): only an admin session.
@@ -116,6 +133,7 @@ setup("seed sample recipes and an admin session", async () => {
       longId: ids[1],
       ideaId: ids[2],
       cookie: { name, value: rest.join("=") },
+      viewerCookie: { name: viewerName, value: viewerRest.join("=") },
       freshCookie: { name: freshName, value: freshRest.join("=") },
     }),
   );
