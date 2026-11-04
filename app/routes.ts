@@ -9,6 +9,8 @@ export default [
   route("recipes/:id/history/:revision", "routes/recipe-version.tsx"),
   route("deleted", "routes/deleted.tsx"),
   route("backup", "routes/backup.tsx"),
+  route("review", "routes/review.tsx"),
+  route("settings", "routes/settings.tsx"),
   route("api/photos", "routes/api.photos.ts"),
   route("api/backup", "routes/api.backup.ts"),
   route("api/backup/restore", "routes/api.backup.restore.ts"),

@@ -222,6 +222,27 @@ Production after merge: `npm run deploy:ci` applies migrations 0003 and 0004 aut
 
 **Done when:** AC-011–014, 024, 025, 029–032, 059, 070 pass, verified with a non-Claude test client and live from ChatGPT and Claude.ai.
 
+#### M4 status (2026-11-03, branch `feature/m4-connector-submissions`)
+
+Verified by automated tests (`npm run check`: 116 unit/integration tests; `npm run test:e2e`: 67 browser checks). Every submission rule runs twice: over MCP with a real OAuth connector token and over the HTTP API with an API key.
+
+| Check | How it was verified |
+| --- | --- |
+| AC-011 | New recipes and partial updates submitted over MCP and over the HTTP API; reads return the current revision for round-tripping |
+| AC-012, AC-070 | With approval on (default), nothing changes in the catalog, search or public pages until approval; the waiting count is shown to admins only |
+| AC-013, AC-059 | Approve applies the reviewed change (history shows "Changed by an AI tool" with the tool's note); reject changes nothing and records no version |
+| AC-014, AC-032 | Approval off saves valid submissions immediately (HTTP 201); waiting items stay waiting; turning it back on queues again |
+| AC-024 | Browser test submits with a plain HTTP client using an API key created on the Settings page, then approves in Review |
+| AC-025 | The same scenarios pass identically over MCP and HTTP |
+| AC-029 | No tool or API route can approve or change settings; tool credentials never count as an admin sign-in; tools only see their own submissions |
+| AC-030 | Retrying with the same idempotency key returns the original result; one recipe |
+| AC-031 | An update against an old revision returns a conflict with the current revision and stores nothing; an update approved after the owner edited becomes a conflict, not an overwrite |
+| Revocation | Disconnected apps' tokens, revoked API keys and keys belonging to former admins are refused |
+
+Also verified against the Cloudflare build in local workerd with D1: migration 0005, MCP tool list and submission, idempotent retry, HTTP submission, pending not public, approval from Review, applied status, stale-update 409, API key revocation.
+
+**Remaining for the owner after deploying:** reconnect or refresh the Claude.ai and ChatGPT connectors so they load the new tools, then ask each to save a recipe from a conversation and approve it in Review (the "live from ChatGPT and Claude.ai" part of the completion criteria).
+
 ### M5 — In-app AI
 
 - Paste import from old chats, link import (JSON-LD first, Claude fallback), image import.

@@ -1201,3 +1201,78 @@ figcaption {
   height: 10px;
   accent-color: var(--accent);
 }
+
+/* ---------- Review and settings (M4) ---------- */
+
+.count-badge {
+  min-width: 20px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.review-card {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.review-card h2 {
+  font-size: 24px;
+}
+
+.review-card h2 a {
+  color: inherit;
+}
+
+.review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.review-actions .btn {
+  flex: 1 1 160px;
+}
+
+.preview summary {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--accent);
+}
+
+.preview > *:not(summary) {
+  margin-top: 10px;
+}
+
+.code-line {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.key-form {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.key-form .field {
+  flex: 1 1 240px;
+}

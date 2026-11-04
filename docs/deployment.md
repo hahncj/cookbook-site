@@ -120,14 +120,11 @@ The container applies database migrations on startup and stores the SQLite datab
 
 Without Docker: `npm ci && npm run build:node && npm run start:node`.
 
-## 4. Connect ChatGPT and Claude.ai (M0 connector check)
+## 4. Connect ChatGPT and Claude.ai
 
-The MCP server URL is `https://cookbook.chrisandelissa.com/mcp`. It uses OAuth: you sign in with an admin Google account and approve the connection. M0 exposes one tool, `ping`, which returns `pong`.
+The MCP server URL is `https://cookbook.chrisandelissa.com/mcp`. Connecting, the available tools, the HTTP API, API keys and revoking access are covered in [integration.md](integration.md).
 
-- **Claude.ai:** Settings → Connectors → Add custom connector → enter the MCP server URL → Connect, then sign in and approve. In a new chat, ask Claude to call the cookbook `ping` tool.
-- **ChatGPT:** custom MCP connectors require a plan that allows them and Developer mode enabled (Settings → Apps & Connectors → Advanced). Create a connector with the MCP server URL and OAuth authentication, sign in and approve, then ask ChatGPT to call `ping`.
-
-Menu names change over time; if they differ, look for "custom connector" or "MCP server" in each app's settings. Revoking access: remove the connector in the AI app (token revocation in the cookbook UI arrives in M4).
+Note: the M0 `ping` tool was replaced in M4 by the real tools (`search_recipes`, `get_recipe`, `submit_recipe`, `update_recipe`, `get_submission_status`). Existing connections keep working; the AI app picks up the new tool list automatically, or after you refresh the connector.
 
 ## Local development
 

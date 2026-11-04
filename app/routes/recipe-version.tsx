@@ -1,7 +1,7 @@
 import { Form, Link, data, redirect, useNavigation } from "react-router";
-import type { Change } from "../../server/core/history";
 import { ingredientLine } from "../../server/core/recipes";
 import { requireAdminWrite } from "../admin.server";
+import { ChangeList } from "../components/change-list";
 import { BackIcon } from "../components/icons";
 import { servicesContext } from "../context";
 import { photoUrl } from "../photo-prepare";
@@ -39,52 +39,6 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   if (result.ok) return redirect(`/recipes/${params.id}?restored=${params.revision}`, 303);
   if (result.reason === "not_found") throw data("Not found", { status: 404 });
   return { error: "The recipe changed since you opened this page, so nothing was restored. Reload and try again." };
-}
-
-function ChangeList({ changes }: { changes: Change[] }) {
-  if (changes.length === 0) return <p className="muted">No differences.</p>;
-  return (
-    <dl className="change-list">
-      {changes.map((change) => (
-        <div key={change.field + change.label}>
-          <dt>{change.label}</dt>
-          {change.type === "text" ? (
-            <dd>
-              {change.before && (
-                <del>
-                  <span className="visually-hidden">Removed: </span>
-                  {change.before}
-                </del>
-              )}
-              {change.after && (
-                <ins>
-                  <span className="visually-hidden">Added: </span>
-                  {change.after}
-                </ins>
-              )}
-            </dd>
-          ) : (
-            <dd>
-              {change.removed.map((line, i) => (
-                <del key={`r${i}`}>
-                  <span aria-hidden="true">− </span>
-                  <span className="visually-hidden">Removed: </span>
-                  {line}
-                </del>
-              ))}
-              {change.added.map((line, i) => (
-                <ins key={`a${i}`}>
-                  <span aria-hidden="true">+ </span>
-                  <span className="visually-hidden">Added: </span>
-                  {line}
-                </ins>
-              ))}
-            </dd>
-          )}
-        </div>
-      ))}
-    </dl>
-  );
 }
 
 export default function RecipeVersion({ loaderData, actionData }: Route.ComponentProps) {

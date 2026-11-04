@@ -6,6 +6,7 @@ A personal recipe collection at cookbook.chrisandelissa.com: public to browse, w
 - Plan and milestone status: [docs/implementation-plan.md](docs/implementation-plan.md)
 - Deployment and connector setup: [docs/deployment.md](docs/deployment.md)
 - Backup and restore: [docs/backup-restore.md](docs/backup-restore.md)
+- Connecting AI tools (MCP, HTTP API, API keys): [docs/integration.md](docs/integration.md)
 
 ## Commands
 

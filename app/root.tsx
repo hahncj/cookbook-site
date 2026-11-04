@@ -26,19 +26,23 @@ import type { Route } from "./+types/root";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const services = context.get(servicesContext);
+  const viewer = await getViewer(request, services);
   return {
-    viewer: await getViewer(request, services),
+    viewer,
     theme: readTheme(request.headers.get("Cookie")),
+    // Admins see how many AI submissions are waiting (never public, AC-070).
+    pendingReviews: viewer?.isAdmin ? await services.submissions.countPending() : 0,
   };
 }
 
 export interface RootData {
   viewer: Viewer | null;
   theme: ThemePreference;
+  pendingReviews: number;
 }
 
 export function useRootData(): RootData {
-  return (useRouteLoaderData("root") as RootData | undefined) ?? { viewer: null, theme: "system" };
+  return (useRouteLoaderData("root") as RootData | undefined) ?? { viewer: null, theme: "system", pendingReviews: 0 };
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -65,7 +69,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 function SiteHeader() {
-  const { viewer } = useRootData();
+  const { viewer, pendingReviews } = useRootData();
   const [params] = useSearchParams();
   const location = useLocation();
   const query = location.pathname === "/" ? (params.get("q") ?? "") : "";
@@ -84,6 +88,9 @@ function SiteHeader() {
         </Form>
         {viewer?.isAdmin && (
           <div className="header-actions">
+            <Link to="/review" className="btn" aria-label={`Review, ${pendingReviews} waiting`}>
+              Review{pendingReviews > 0 && <span className="count-badge" aria-hidden="true">{pendingReviews}</span>}
+            </Link>
             <Link to="/recipes/new" className="btn btn-primary">
               <PlusIcon />
               Add
@@ -145,6 +152,7 @@ function SiteFooter() {
         <nav aria-label="Account" className="footer-links">
           {viewer?.isAdmin ? (
             <>
+              <Link to="/settings">Settings</Link>
               <Link to="/backup">Backup</Link>
               <Link to="/deleted">Deleted recipes</Link>
               <span className="muted">{viewer.email}</span>
