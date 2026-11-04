@@ -29,16 +29,14 @@ async function resetProfile(page: Page) {
 
 const section = (page: Page, name: string) => page.getByRole("region", { name });
 
-const aiToggle = (page: Page) => page.getByRole("banner").getByRole("button", { name: "AI mode: find new recipes" });
+const modeButton = (page: Page, mode: "AI" | "Web") =>
+  page.getByRole("banner").getByRole("button", { name: mode === "AI" ? "AI: write new recipes" : "Web: find new recipes" });
 
-/** Turns on AI mode in the header search bar, picks the source and preferences, and asks for new recipes. */
-async function findWithAi(page: Page, request: string, options: { source?: "Write with AI" | "Find on the web"; prefs?: boolean } = {}) {
-  if ((await aiToggle(page).getAttribute("aria-pressed")) !== "true") await aiToggle(page).click();
-  await expect(aiToggle(page)).toHaveAttribute("aria-pressed", "true");
-  const banner = page.getByRole("banner");
-  await banner.getByRole("radio", { name: options.source ?? "Write with AI" }).check();
-  await banner.getByRole("checkbox", { name: "Use my preferences" }).setChecked(options.prefs ?? true);
-  const box = page.getByRole("searchbox", { name: "Describe new recipes to find with AI" });
+/** Picks AI or Web in the header search bar and asks for new recipes. */
+async function findWithAi(page: Page, request: string, mode: "AI" | "Web" = "AI") {
+  if ((await modeButton(page, mode).getAttribute("aria-pressed")) !== "true") await modeButton(page, mode).click();
+  await expect(modeButton(page, mode)).toHaveAttribute("aria-pressed", "true");
+  const box = page.getByRole("searchbox", { name: mode === "AI" ? "Describe new recipes for AI to write" : "Describe new recipes to find on the web" });
   await box.fill(request);
   await box.press("Enter");
   await expect(page).toHaveURL(/\/discover$/);
@@ -95,11 +93,12 @@ test.describe("preferences (AC-016, AC-017, AC-035)", () => {
 });
 
 test.describe("AI mode in the search bar (AC-015, AC-034)", () => {
-  test("Write with AI: labeled AI-written recipes that save through the editor; preferences can be turned off", async ({ page, context }) => {
+  test("AI: labeled AI-written recipes that save through the editor; preferences can be left out", async ({ page, context }) => {
     await signInAsAdmin(context);
     await page.goto("/");
-    await expect(aiToggle(page)).toHaveAttribute("aria-pressed", "false");
-    await findWithAi(page, "noodles tonight", { prefs: false });
+    await expect(modeButton(page, "AI")).toHaveAttribute("aria-pressed", "false");
+    await expect(modeButton(page, "Web")).toHaveAttribute("aria-pressed", "false");
+    await findWithAi(page, "noodles tonight, ignore my preferences");
 
     const results = page.getByRole("region", { name: /New recipes for/ });
     await expect(results.getByText("Written by AI · preferences not used")).toBeVisible();
@@ -107,7 +106,7 @@ test.describe("AI mode in the search bar (AC-015, AC-034)", () => {
     // D19: AI-written recipes are labeled untested, with the full recipe on request.
     const written = results.getByRole("listitem").filter({ hasText: "Written by AI · untested" });
     await expect(written).toHaveCount(1);
-    await expect(written.getByRole("heading", { name: "AI Noodles Tonight Bowl" })).toBeVisible();
+    await expect(written.getByRole("heading", { name: "AI Noodles Tonight, Ignore My Preferences Bowl" })).toBeVisible();
     await expect(written).not.toContainText("Matches your preference");
     await written.getByText("Show ingredients and steps").click();
     await expect(written.getByText("200 g rice noodles")).toBeVisible();
@@ -115,26 +114,26 @@ test.describe("AI mode in the search bar (AC-015, AC-034)", () => {
     await expectAccessible(page);
 
     // Saving is explicit: the editor opens with the recipe; nothing is saved until Save (D2).
-    await written.getByRole("button", { name: "Save to cookbook: AI Noodles Tonight Bowl" }).click();
+    await written.getByRole("button", { name: "Save to cookbook: AI Noodles Tonight, Ignore My Preferences Bowl" }).click();
     await expect(page.getByText("Written by AI and untested. Check the amounts, times and steps.")).toBeVisible();
-    await expect(page.getByLabel("Title")).toHaveValue("AI Noodles Tonight Bowl");
+    await expect(page.getByLabel("Title")).toHaveValue("AI Noodles Tonight, Ignore My Preferences Bowl");
     await expect(page.getByLabel("Amount 1", { exact: true })).toHaveValue("200 g");
-    await expect(aiToggle(page)).toHaveAttribute("aria-pressed", "false");
+    await expect(modeButton(page, "AI")).toHaveAttribute("aria-pressed", "false");
 
-    // With AI mode off, the same box searches the cookbook as before.
+    // With neither selected, the same box searches the cookbook as before.
     const search = page.getByRole("searchbox", { name: "Search recipes" });
     await search.fill("gochujang");
     await search.press("Enter");
     await expect(page).toHaveURL(/\/\?q=gochujang/);
   });
 
-  test("Find on the web: labeled web recipes with verified sources", async ({ page, context }) => {
+  test("Web: labeled web recipes with verified sources", async ({ page, context }) => {
     await signInAsAdmin(context);
     await page.goto("/");
-    await findWithAi(page, "noodles tonight", { source: "Find on the web" });
+    await findWithAi(page, "noodles tonight", "Web");
 
     const results = page.getByRole("region", { name: /New recipes for/ });
-    await expect(results.getByText("Found on the web · your preferences were used")).toBeVisible();
+    await expect(results.getByText(/Found on the web · your preferences were used/)).toBeVisible();
     await expect(results.getByRole("listitem").filter({ hasText: "Written by AI" })).toHaveCount(0);
     // AC-034: web recipes are labeled, link to their source, and say the page was read.
     const webCard = results.getByRole("listitem").filter({ hasText: "From the web" });
@@ -154,21 +153,21 @@ test.describe("AI mode in the search bar (AC-015, AC-034)", () => {
     await expectNoHorizontalScroll(page);
     await expectAccessible(page);
 
-    // The choice of source is remembered on this device.
-    await page.goto("/");
-    await aiToggle(page).click();
-    await expect(page.getByRole("banner").getByRole("radio", { name: "Find on the web" })).toBeChecked();
+    // The results page keeps Web selected; tapping it again goes back to normal search.
+    await expect(modeButton(page, "Web")).toHaveAttribute("aria-pressed", "true");
+    await modeButton(page, "Web").click();
+    await expect(page.getByRole("searchbox", { name: "Search recipes" })).toBeVisible();
   });
 
   test("only admins get AI mode; without an API key it says AI isn't set up", async ({ page, context }) => {
     await page.goto("/");
-    await expect(aiToggle(page)).toHaveCount(0);
+    await expect(modeButton(page, "AI")).toHaveCount(0);
     await page.goto("/discover");
     await expect(page).toHaveURL(/\/sign-in\?next=%2Fdiscover/);
 
     await signInAsViewer(context);
     await page.goto("/");
-    await expect(aiToggle(page)).toHaveCount(0);
+    await expect(modeButton(page, "Web")).toHaveCount(0);
     const denied = await page.goto("/discover");
     expect(denied?.status()).toBe(403);
 

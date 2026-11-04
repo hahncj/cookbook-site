@@ -29,9 +29,8 @@ export async function action({ request, context }: Route.ActionArgs) {
   const form = await request.formData();
   const asked = String(form.get("q") ?? "");
   const source = form.get("source") === "web" ? "web" : "write";
-  const usePreferences = form.get("prefs") === "on";
   if (!services.ai.configured) return data<DiscoverData>({ ok: false, error: AI_NOT_CONFIGURED, request: asked }, { status: 503 });
-  const outcome = await services.discovery.discover({ request: asked, source, usePreferences });
+  const outcome = await services.discovery.discover({ request: asked, source });
   if (!outcome.ok) return data<DiscoverData>({ ok: false, error: outcome.message, request: asked }, { status: outcome.reason === "invalid" ? 422 : 502 });
   return data<DiscoverData>({ ok: true, result: outcome.value });
 }
@@ -66,9 +65,9 @@ export default function Discover({ loaderData, actionData }: Route.ComponentProp
       )}
       {!answer && !finding && (
         <p className="lede">
-          With <strong>AI</strong> on in the search bar, describe what you'd like to cook. Choose <strong>Write with AI</strong> for recipes Claude writes
-          for you (quick), or <strong>Find on the web</strong> for real recipes with sources (slower). Your <Link to="/preferences">preferences</Link>{" "}
-          are used unless you turn them off. It won't repeat recipes you already have. Nothing is saved unless you save it.
+          In the search bar, choose <strong>AI</strong> for recipes Claude writes for you (quick), or <strong>Web</strong> for real recipes with sources
+          (slower), then describe what you'd like to cook. Your <Link to="/preferences">preferences</Link> are used unless you add “ignore my
+          preferences” to the request. It won't repeat recipes you already have. Nothing is saved unless you save it.
         </p>
       )}
       {failed && (
@@ -90,7 +89,8 @@ function Results({ result }: { result: Discoveries }) {
         New recipes for “{result.request}”
       </h2>
       <p className="muted">
-        {result.source === "web" ? "Found on the web" : "Written by AI"} · {result.usedPreferences ? "your preferences were used" : "preferences not used"}
+        {result.source === "web" ? "Found on the web" : "Written by AI"} ·{" "}
+        {result.usedPreferences ? "your preferences were used (add “ignore my preferences” to leave them out)" : "preferences not used"}
       </p>
       {result.note && <p className="notice">{result.note}</p>}
       {nothing && <p className="empty">Nothing fit this time. Try asking a different way.</p>}

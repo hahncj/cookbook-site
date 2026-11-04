@@ -2,7 +2,7 @@
 // ones already in the cookbook, from one of two sources the owner picks:
 // "Write with AI" (Claude writes them; one quick call) or "Find on the web"
 // (real pages via web search). The preference profile and favorites add
-// context unless the owner turns preferences off for that search. Pure logic over the AI port. This
+// context unless the request asks to leave them out ("ignore my preferences"). Pure logic over the AI port. This
 // module keeps it honest:
 // - A web recipe must link to a page Anthropic's web tools actually returned
 //   in this request (no invented sources), and says whether the page was read
@@ -87,18 +87,27 @@ export function normalizeUrl(value: string): string | null {
   return url.toString().replace(/\/$/, "");
 }
 
+/**
+ * True when the request asks to leave preferences out, e.g. "ignore my
+ * preferences" or "without preferences" (D21: there's no separate switch).
+ */
+export function wantsNoPreferences(request: string): boolean {
+  return /\b(ignore|ignoring|skip|skipping|without|no|not using|don'?t use|do not use|forget)\b(\s+\w+){0,2}\s+(preferences?|prefs?|profile)\b/i.test(request);
+}
+
 const tidy = (value: string, max: number) => value.replace(/\s+/g, " ").trim().slice(0, max);
 const orNull = (value: string, max: number) => tidy(value, max) || null;
 
 export function createDiscovery({ ai, digestSources, signals, profile, now }: DiscoveryDeps) {
   return {
     /** Admin-only: the caller checks access before calling (AC-066/067). */
-    async discover(input: { request: unknown; source: DiscoverSource; usePreferences: boolean }): Promise<DiscoverOutcome> {
+    async discover(input: { request: unknown; source: DiscoverSource }): Promise<DiscoverOutcome> {
       const request = typeof input.request === "string" ? tidy(input.request, REQUEST_MAX + 1) : "";
       if (!request) return { ok: false, reason: "invalid", message: "Describe what you'd like to cook first." };
       if (request.length > REQUEST_MAX) return { ok: false, reason: "invalid", message: `Keep the request under ${REQUEST_MAX} characters.` };
 
-      const { source, usePreferences } = input;
+      const { source } = input;
+      const usePreferences = !wantsNoPreferences(request);
       const [sources, markerSignals, prefs] = await Promise.all([
         digestSources(),
         usePreferences ? signals() : Promise.resolve([]),

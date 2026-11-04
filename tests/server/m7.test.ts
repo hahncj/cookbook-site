@@ -9,7 +9,7 @@ import { collectWebSources, createAnthropicAi } from "../../server/ai/anthropic"
 import { exportBackupData, importRows, TABLE_ORDER } from "../../server/backup";
 import type { DiscoverInput, WebSourceSeen } from "../../server/core/ai";
 import { buildDigests, sameStatement } from "../../server/core/preferences";
-import { normalizeUrl } from "../../server/core/discover";
+import { normalizeUrl, wantsNoPreferences } from "../../server/core/discover";
 import { validateEntry } from "../../server/core/recipes";
 import { FakeAi } from "../helpers/fake-ai";
 import { ADMIN_EMAIL, BASE_URL, createTestServices, sessionCookieFor } from "../helpers/services";
@@ -204,7 +204,7 @@ describe("preference profile (AC-016, AC-017, AC-035)", () => {
     ]);
 
     // Later AI searches use the correction, and treat the rejection as not true (AC-017).
-    await run(discoverAction(args(post("/discover", { q: "dinner", prefs: "on" }, admin))));
+    await run(discoverAction(args(post("/discover", { q: "dinner" }, admin))));
     const input = discoverInput();
     expect(input.preferences).toEqual([
       { statement: "Likes mild Korean flavors, not too spicy", confirmed: true },
@@ -292,7 +292,7 @@ describe("AI mode finds new recipes (AC-015, AC-034, D19)", () => {
         ],
       },
     };
-    const response = await run(discoverAction(args(post("/discover", { q: "  something warming  ", source: "web", prefs: "on" }, admin))));
+    const response = await run(discoverAction(args(post("/discover", { q: "  something warming  ", source: "web" }, admin))));
     expect(response.status).toBe(200);
     const result = response.body.result;
     expect(result).toMatchObject({ request: "something warming", source: "web", usedPreferences: true });
@@ -327,10 +327,10 @@ describe("AI mode finds new recipes (AC-015, AC-034, D19)", () => {
         webSources: [{ url: "https://recipes.example.org/soup", title: "Soup", read: true }],
       },
     };
-    const response = await run(discoverAction(args(post("/discover", { q: "leeks" }, admin))));
+    const response = await run(discoverAction(args(post("/discover", { q: "leeks, ignore my preferences" }, admin))));
     const result = response.body.result;
     expect(result).toMatchObject({ source: "write", usedPreferences: false, web: [] });
-    // Without "Use my preferences", no profile or favorites are sent; saved titles still are, to avoid repeats.
+    // "Ignore my preferences" in the request: no profile or favorites are sent; saved titles still are, to avoid repeats.
     expect(discoverInput()).toMatchObject({ source: "write", preferences: null, rejected: [], favorites: [], cookbookTitles: ["Gochujang Noodles"] });
     // Incomplete written recipes are dropped; blank rows and steps are tidied.
     expect(result.written).toEqual([
@@ -382,6 +382,12 @@ describe("AI mode finds new recipes (AC-015, AC-034, D19)", () => {
 });
 
 describe("helpers", () => {
+  it("spots requests that leave preferences out (D21)", () => {
+    for (const text of ["stew, ignore my preferences", "Without preferences: tacos", "no preferences", "don't use my preferences", "skip my profile"])
+      expect(wantsNoPreferences(text), text).toBe(true);
+    for (const text of ["fall stew", "something my preferences would like", "no-bake dessert"]) expect(wantsNoPreferences(text), text).toBe(false);
+  });
+
   it("normalizes links for matching", () => {
     expect(normalizeUrl("http://WWW.Example.com/a/#x")).toBe("https://example.com/a");
     expect(normalizeUrl("ftp://example.com")).toBeNull();
