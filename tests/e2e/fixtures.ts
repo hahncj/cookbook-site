@@ -51,15 +51,12 @@ export async function jpegWithGps(page: Page): Promise<Buffer> {
   return Buffer.concat([jpeg.subarray(0, 2), app1, jpeg.subarray(2)]);
 }
 
-/** True for the phone projects, where Review and Import live in the account menu (E2). */
+/** True for the phone projects (narrower than 600px: picture only, no name). */
 export const isPhone = (page: Page) => (page.viewportSize()?.width ?? 1280) < 600;
 
-/**
- * Follows an admin top-bar link (Review, Import). On phones those live in the
- * account menu, so this opens it first.
- */
+/** Follows an admin link (Review, Import) from the account menu (E2). */
 export async function clickAdminLink(page: Page, name: string | RegExp) {
-  if (isPhone(page)) await page.getByRole("banner").getByRole("button", { name: /^Account:/ }).click();
+  await page.getByRole("banner").getByRole("button", { name: /^Account:/ }).click();
   await page.getByRole("banner").getByRole("link", { name, exact: typeof name === "string" }).filter({ visible: true }).click();
 }
 

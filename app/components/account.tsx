@@ -70,8 +70,8 @@ export function Avatar({ viewer, size = 32 }: { viewer: Viewer; size?: number })
 
 /**
  * E2: profile picture (and name on wider screens) opening a small menu.
- * On phones the menu also holds Review and Import, and a dot on the picture
- * shows waiting reviews (the top-bar buttons are hidden there).
+ * For admins the menu also holds Review and Import, and a dot on the picture
+ * shows waiting reviews. Add is the floating button.
  */
 export function AccountMenu({ viewer, pendingReviews = 0 }: { viewer: Viewer; pendingReviews?: number }) {
   const [open, setOpen] = useState(false);
@@ -133,7 +133,7 @@ export function AccountMenu({ viewer, pendingReviews = 0 }: { viewer: Viewer; pe
         <ul className="account-links">
           {viewer.isAdmin && (
             <>
-              <li className="phone-only">
+              <li>
                 <Link to="/review" aria-label={`Review, ${pendingReviews} waiting`}>
                   Review
                   {pendingReviews > 0 && (
@@ -143,7 +143,7 @@ export function AccountMenu({ viewer, pendingReviews = 0 }: { viewer: Viewer; pe
                   )}
                 </Link>
               </li>
-              <li className="phone-only">
+              <li>
                 <Link to="/recipes/import">Import</Link>
               </li>
             </>
@@ -173,12 +173,12 @@ export function AccountMenu({ viewer, pendingReviews = 0 }: { viewer: Viewer; pe
 /** Pages where you are already adding or editing: no floating Add there. */
 const EDITOR_PATH = /^\/recipes\/(new|import|[^/]+\/edit)\/?$/;
 
-/** E2 (phones): Add as a round floating button at the bottom right. Hidden on wider screens by CSS. */
+/** E2: Add as a round floating button at the bottom right, on every screen size. */
 export function FloatingAdd() {
   const location = useLocation();
   if (EDITOR_PATH.test(location.pathname)) return null;
   return (
-    <Link to="/recipes/new" className="fab" aria-label="Add a recipe">
+    <Link to="/recipes/new" className="fab" aria-label="Add a recipe" title="Add a recipe">
       <PlusIcon />
     </Link>
   );
