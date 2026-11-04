@@ -257,12 +257,6 @@ button {
   margin-left: auto;
 }
 
-.header-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
 .header-sign-in {
   white-space: nowrap;
 }
@@ -329,8 +323,7 @@ button {
   color: var(--muted);
 }
 
-/* Phones: just the picture, and tighter buttons so admin actions and the
-   account fit on the same row as the logo. */
+/* Phones: just the picture. */
 @media (max-width: 599px) {
   .account-name,
   .account-chevron {
@@ -341,12 +334,6 @@ button {
     justify-content: center;
     padding: 0;
   }
-
-  /* Phone top bar (E2): logo and account on one line; Add floats, Review
-     and Import live in the account menu. */
-  .header-actions {
-    display: none;
-  }
 }
 
 .avatar-wrap {
@@ -354,8 +341,8 @@ button {
   display: block;
 }
 
+/* E2: a dot on the picture when reviews are waiting (Review is in the menu). */
 .account-dot {
-  display: none;
   position: absolute;
   top: -1px;
   right: -1px;
@@ -366,51 +353,45 @@ button {
   background: var(--fav);
 }
 
-.phone-only {
-  display: none;
-}
-
+/* E2: Add floats at the bottom right on every screen size. */
 .fab {
-  display: none;
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 15;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: var(--shadow);
 }
 
-@media (max-width: 599px) {
-  .account-dot {
-    display: block;
-  }
+.fab:hover {
+  background: var(--accent-hover);
+  color: var(--on-accent);
+}
 
-  .phone-only {
-    display: list-item;
-  }
+.fab .icon {
+  width: 26px;
+  height: 26px;
+}
 
+.site-main.has-fab {
+  padding-bottom: calc(88px + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 600px) {
   .fab {
-    position: fixed;
-    right: max(16px, env(safe-area-inset-right));
-    bottom: max(16px, env(safe-area-inset-bottom));
-    z-index: 15;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: var(--accent);
-    color: var(--on-accent);
-    box-shadow: var(--shadow);
-  }
-
-  .fab:hover {
-    background: var(--accent-hover);
-    color: var(--on-accent);
-  }
-
-  .fab .icon {
-    width: 26px;
-    height: 26px;
+    right: 32px;
+    bottom: 32px;
   }
 
   .site-main.has-fab {
-    padding-bottom: calc(88px + env(safe-area-inset-bottom));
+    padding-bottom: 104px;
   }
 }
 

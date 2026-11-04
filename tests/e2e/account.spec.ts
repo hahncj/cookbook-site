@@ -109,9 +109,8 @@ test.describe("sign in from the top bar (E2)", () => {
   });
 });
 
-test.describe("admin actions by screen size (E2 phone top bar)", () => {
-  test("phones: logo and picture on one line, Add floats, Review and Import in the menu", async ({ page, context, request }) => {
-    test.skip(!isPhone(page), "Phone layout only.");
+test.describe("admin actions (E2 top bar, every screen size)", () => {
+  test("logo and picture on one line, Add floats, Review and Import in the menu", async ({ page, context, request }) => {
     await signInAsAdmin(context);
     // A waiting submission, so the dot and the count show.
     await page.goto("/settings");
@@ -127,7 +126,7 @@ test.describe("admin actions by screen size (E2 phone top bar)", () => {
     const account = header(page).getByRole("button", { name: /^Account: Admin/ });
     await expectSameRow(brand(page), account);
     const box = await header(page).boundingBox();
-    expect(box!.height, "top bar: logo row plus search row only").toBeLessThan(160);
+    expect(box!.height, "top bar: logo row plus search row at most").toBeLessThan(160);
     for (const name of ["Review", "Import", "Add"]) {
       await expect(header(page).getByRole("link", { name, exact: false }).filter({ visible: true })).toHaveCount(0);
     }
@@ -153,16 +152,12 @@ test.describe("admin actions by screen size (E2 phone top bar)", () => {
     await expect(fab).toHaveCount(0);
   });
 
-  test("wider screens keep Review, Import and Add in the top bar", async ({ page, context }) => {
-    test.skip(isPhone(page), "Tablet and desktop only.");
+  test("wider screens show the name next to the picture; phones show the picture only", async ({ page, context }) => {
     await signInAsAdmin(context);
     await page.goto("/");
-    await expect(header(page).getByRole("link", { name: /^Review, \d+ waiting$/ })).toBeVisible();
-    await expect(header(page).getByRole("link", { name: "Import", exact: true })).toBeVisible();
-    await expect(header(page).getByRole("link", { name: "Add", exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Add a recipe" })).toBeHidden();
-    await header(page).getByRole("button", { name: /^Account: Admin/ }).click();
-    await expect(page.locator(".account-panel").getByRole("link", { name: "Import" })).toBeHidden();
+    const name = header(page).locator(".account-name");
+    if (isPhone(page)) await expect(name).toBeHidden();
+    else await expect(name).toHaveText("Admin");
   });
 });
 

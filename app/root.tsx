@@ -17,7 +17,7 @@ import {
   useSearchParams,
 } from "react-router";
 import { AccountMenu, FloatingAdd, SettingsGear, SignInButton } from "./components/account";
-import { PlusIcon, SearchIcon } from "./components/icons";
+import { SearchIcon } from "./components/icons";
 import { servicesContext } from "./context";
 import { getViewer, type Viewer } from "./session.server";
 import { readTheme, type ThemePreference } from "./theme";
@@ -104,20 +104,6 @@ function SiteHeader() {
           <input id="site-search" type="search" name="q" defaultValue={query} key={query} placeholder="Search titles, ingredients, notes" />
         </Form>
         <div className="header-end">
-          {viewer?.isAdmin && (
-            <div className="header-actions">
-              <Link to="/review" className="btn" aria-label={`Review, ${pendingReviews} waiting`}>
-                Review{pendingReviews > 0 && <span className="count-badge" aria-hidden="true">{pendingReviews}</span>}
-              </Link>
-              <Link to="/recipes/import" className="btn">
-                Import
-              </Link>
-              <Link to="/recipes/new" className="btn btn-primary">
-                <PlusIcon />
-                Add
-              </Link>
-            </div>
-          )}
           {viewer ? (
             <AccountMenu viewer={viewer} pendingReviews={pendingReviews} />
           ) : (

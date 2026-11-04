@@ -70,11 +70,18 @@ After using the first version, the owner found the phone top bar too cluttered: 
 - **Add** moves to a round floating **+** button at the bottom right of the screen.
 - **Review** and **Import** move into the profile menu. Review shows how many items are waiting.
 - A small dot on the profile picture shows when reviews are waiting.
-- Wider screens (tablet and desktop) keep Review, Import and Add in the top bar, as now.
+- ~~Wider screens (tablet and desktop) keep Review, Import and Add in the top bar, as now.~~ Replaced below.
+
+### Same top bar on every screen — Confirmed 2026-11-04
+
+After seeing the phone layout, the owner asked for the same look on tablet and desktop:
+
+- Every screen size uses the phone layout: no Review / Import / Add buttons in the top bar, a floating **+** for Add, Review and Import in the profile menu, and the dot on the picture when reviews are waiting.
+- Wider screens still show the name next to the picture.
 
 ### Phone top bar — Proposed details
 
-- "Phone" means screens narrower than 600px, the same point where the name next to the picture is hidden.
+- "Phone" means screens narrower than 600px, the same point where the name next to the picture is hidden. Since the layout now applies everywhere, this only controls the name.
 - The floating **+** is hidden on pages where you are already adding or editing (new recipe, import, edit), so it never covers the editor's buttons.
 - The floating **+** clears the iPhone home bar, and pages get extra space at the bottom so it never hides the last item.
 
@@ -111,6 +118,6 @@ Should Backup and Deleted recipes live in Settings for admins?
 | Item | Status | Notes |
 | --- | --- | --- |
 | E1 | In progress | Built separately. |
-| E2 | Merged 2026-11-04 (PR #15); phone top bar built 2026-11-04, awaiting review | **Sign in** sits at the right of the top bar and goes straight to Google, returning to the same page. Signed in, the spot shows the Google picture (name too on screens 600px and wider, first letter if no picture) and opens a menu: name and email, Settings, Sign out. Better Auth already saves Google's picture as `user.image`; it is now refreshed on every sign-in (`overrideUserInfoOnSignIn`). `/sign-in` stays for AI tool connections, retitled **Sign in**. Phone follow-up: below 600px, Add is a floating **+** button and Review / Import are in the profile menu, with a dot on the picture when reviews wait. |
+| E2 | Merged 2026-11-04 (PR #15, phone top bar PR #17); same top bar on every screen built 2026-11-04, awaiting review | **Sign in** sits at the right of the top bar and goes straight to Google, returning to the same page. Signed in, the spot shows the Google picture (name too on screens 600px and wider, first letter if no picture) and opens a menu: name and email, Settings, Sign out. Better Auth already saves Google's picture as `user.image`; it is now refreshed on every sign-in (`overrideUserInfoOnSignIn`). `/sign-in` stays for AI tool connections, retitled **Sign in**. Follow-ups: on every screen size, Add is a floating **+** button and Review / Import are in the profile menu, with a dot on the picture when reviews wait. |
 | E3 | Merged 2026-11-04 (PR #15) | `/settings` is open to everyone. Visitors see Appearance only; admins also see the admin sections, whose actions still refuse signed-out (401) and non-admin (403) requests. Visitors reach it from a gear in the top bar. The footer is gone, since nothing was left in it. |
 | E4 | Merged 2026-11-04 (PR #15) | **Admin tools** section in Settings links to Backup and Deleted recipes. Both pages are unchanged. |
