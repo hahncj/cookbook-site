@@ -7,6 +7,7 @@
 // - The profile changes only when the owner asks for a refresh (D9). A refresh
 //   replaces unreviewed suggestions only; corrections always survive it.
 // - A rejected or corrected inference is never suggested again automatically.
+// - The profile only shapes AI mode in the search bar (D9).
 // - Allergies and medical or dietary restrictions are never inferred.
 import type { Actor } from "./catalog";
 import type { AiFailure, InferredPreference, RecipeAi, RecipeDigest } from "./ai";
@@ -166,7 +167,7 @@ export interface PreferencesDeps {
 
 export function createPreferences({ repo, ai, digestSources, signals, now, newId }: PreferencesDeps) {
   /** What the AI should know: everything not rejected, plus the rejected list to steer clear of. */
-  async function forRecommendations() {
+  async function forDiscovery() {
     const items = await repo.list();
     return {
       preferences: items.filter((p) => p.status !== "rejected").map((p) => ({ statement: p.statement, confirmed: p.status === "confirmed" })),
@@ -186,7 +187,7 @@ export function createPreferences({ repo, ai, digestSources, signals, now, newId
       };
     },
 
-    forRecommendations,
+    forDiscovery,
 
     /**
      * Asks the AI for a fresh set of suggestions (admin-only; the caller

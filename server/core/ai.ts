@@ -53,16 +53,18 @@ export interface ProfileInput {
   rejected: string[];
 }
 
-export interface RecommendInput {
-  /** The owner's request for this time only, e.g. "something quick". */
-  question: string;
-  recipes: RecipeDigest[];
-  /** What the profile says, with who said it. */
+export interface DiscoverInput {
+  /** What the owner typed in the search bar with AI mode on. */
+  request: string;
+  /** The preference profile, with who said it. */
   preferences: { statement: string; confirmed: boolean }[];
   /** Rejected inferences: don't assume these. */
   rejected: string[];
-  includeWeb: boolean;
-  /** ISO date, so "recently made" means something. */
+  /** Titles of favorite and often-made recipes, as taste hints. */
+  favorites: string[];
+  /** Every saved title, so results are new rather than repeats. */
+  cookbookTitles: string[];
+  /** ISO date. */
   today: string;
 }
 
@@ -74,9 +76,22 @@ export interface WebSourceSeen {
   read: boolean;
 }
 
-export interface RecommendationDraft {
-  saved: { recipeId: string; reason: string }[];
+/** A recipe Claude wrote itself (owner-approved 2026-11-04, D19): labeled, untested, saved only through the editor. */
+export interface WrittenRecipe {
+  title: string;
+  description: string;
+  servings: string;
+  prepTime: string;
+  cookTime: string;
+  ingredients: { quantity: string; item: string }[];
+  steps: string[];
+  notes: string;
+  reason: string;
+}
+
+export interface DiscoveryDraft {
   web: { title: string; url: string; sourceName: string; reason: string }[];
+  written: WrittenRecipe[];
   note: string | null;
   /** Collected by the adapter from tool results, never from the model's own text. */
   webSources: WebSourceSeen[];
@@ -96,8 +111,8 @@ export interface RecipeAi {
   compareRecipes(a: string, b: string): Promise<AiResult<RecipeComparison>>;
   /** Infers likely preferences from the catalog (M7, on request only). */
   inferPreferences(input: ProfileInput): Promise<AiResult<{ preferences: InferredPreference[]; note: string | null }>>;
-  /** Ranks saved recipes and, when asked, finds new ones with web search (M7). */
-  recommend(input: RecommendInput): Promise<AiResult<RecommendationDraft>>;
+  /** Finds new recipes on the web and writes new ones, guided by the preference profile (M7). */
+  discover(input: DiscoverInput): Promise<AiResult<DiscoveryDraft>>;
 }
 
 export const notConfigured: RecipeAi = {
@@ -106,7 +121,7 @@ export const notConfigured: RecipeAi = {
   identifyIngredients: async () => ({ ok: false, reason: "not_configured", message: AI_NOT_CONFIGURED }),
   compareRecipes: async () => ({ ok: false, reason: "not_configured", message: AI_NOT_CONFIGURED }),
   inferPreferences: async () => ({ ok: false, reason: "not_configured", message: AI_NOT_CONFIGURED }),
-  recommend: async () => ({ ok: false, reason: "not_configured", message: AI_NOT_CONFIGURED }),
+  discover: async () => ({ ok: false, reason: "not_configured", message: AI_NOT_CONFIGURED }),
 };
 
 export const AI_NOT_CONFIGURED = "AI features aren't set up yet (no Anthropic API key). Everything else works normally.";

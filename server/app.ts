@@ -15,7 +15,7 @@ import { createMarkersRepository } from "./adapters/markers-repo";
 import { createMarkers, type Markers } from "./core/markers";
 import { createPreferencesRepository } from "./adapters/preferences-repo";
 import { createPreferences, type Preferences } from "./core/preferences";
-import { createRecommender, type Recommender } from "./core/recommendations";
+import { createDiscovery, type Discovery } from "./core/discover";
 import { isAdminEmail } from "./core/admin";
 import { servePhoto } from "./photos";
 import { notConfigured, type RecipeAi } from "./core/ai";
@@ -39,8 +39,8 @@ export interface Services {
   ai: RecipeAi;
   /** Preference profile (M7). Public to read (D3); refresh and corrections are admin-only. */
   preferences: Preferences;
-  /** "Ask AI" suggestions (M7). Admin-only callers. */
-  recommender: Recommender;
+  /** AI mode in the search bar: new recipes from the web or written by AI (M7). Admin-only callers. */
+  discovery: Discovery;
   /** Fetches web pages for link import, with SSRF protection. */
   fetchPage: PageFetcher;
   /** Find a photo (E1): source page, stock, then web. Admin-only callers. */
@@ -103,11 +103,11 @@ export function createServices(deps: HostDeps): Services {
     submissions: createSubmissions({ repo: createSubmissionsRepository(deps.db), catalog, now, newId }),
     ai,
     preferences,
-    recommender: createRecommender({
+    discovery: createDiscovery({
       ai,
       digestSources: () => catalog.digestSources(),
       signals,
-      profile: () => preferences.forRecommendations(),
+      profile: () => preferences.forDiscovery(),
       now,
     }),
     fetchPage,

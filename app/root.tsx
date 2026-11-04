@@ -13,13 +13,15 @@ import {
   ScrollRestoration,
   isRouteErrorResponse,
   useLocation,
+  useNavigation,
   useRouteLoaderData,
   useSearchParams,
 } from "react-router";
 import { AccountMenu, FloatingAdd, SettingsGear, SignInButton } from "./components/account";
-import { SearchIcon } from "./components/icons";
+import { SearchIcon, SparkleIcon } from "./components/icons";
 import { servicesContext } from "./context";
 import { getViewer, type Viewer } from "./session.server";
+import { useEffect, useState } from "react";
 import { readTheme, type ThemePreference } from "./theme";
 import type { Route } from "./+types/root";
 
@@ -96,13 +98,7 @@ function SiteHeader() {
             540 Kitchen
           </span>
         </Link>
-        <Form method="get" action="/" role="search" className="search header-search">
-          <label htmlFor="site-search" className="visually-hidden">
-            Search recipes
-          </label>
-          <SearchIcon />
-          <input id="site-search" type="search" name="q" defaultValue={query} key={query} placeholder="Search titles, ingredients, notes" />
-        </Form>
+        <HeaderSearch query={query} isAdmin={Boolean(viewer?.isAdmin)} />
         <div className="header-end">
           {viewer ? (
             <AccountMenu viewer={viewer} pendingReviews={pendingReviews} />
@@ -115,6 +111,59 @@ function SiteHeader() {
         </div>
       </div>
     </header>
+  );
+}
+
+/**
+ * The search bar. Admins also get an AI toggle (M7): with it on, the box asks
+ * Claude for NEW recipes (web finds and AI-written ones, shaped by the
+ * preference profile) instead of searching the cookbook. That's a paid call,
+ * so it is a POST that the server checks, never a plain page load.
+ */
+function HeaderSearch({ query, isAdmin }: { query: string; isAdmin: boolean }) {
+  const location = useLocation();
+  const navigation = useNavigation();
+  const onDiscover = location.pathname === "/discover";
+  const [ai, setAi] = useState(onDiscover);
+  useEffect(() => setAi(onDiscover), [onDiscover]);
+  const aiMode = isAdmin && ai;
+  const finding = navigation.state === "submitting" && navigation.formAction === "/discover";
+  return (
+    <div className="header-search">
+      <Form method={aiMode ? "post" : "get"} action={aiMode ? "/discover" : "/"} role="search" className={`search${isAdmin ? " search-with-ai" : ""}`}>
+        <label htmlFor="site-search" className="visually-hidden">
+          {aiMode ? "Describe new recipes to find with AI" : "Search recipes"}
+        </label>
+        {aiMode ? <SparkleIcon /> : <SearchIcon />}
+        <input
+          id="site-search"
+          type="search"
+          name="q"
+          defaultValue={query}
+          key={query}
+          placeholder={aiMode ? "Find new recipes with AI, e.g. quick vegetarian dinner" : "Search titles, ingredients, notes"}
+          maxLength={aiMode ? 500 : undefined}
+          required={aiMode}
+          readOnly={finding}
+        />
+        {isAdmin && (
+          <button
+            type="button"
+            className={`ai-toggle${aiMode ? " ai-toggle-on" : ""}`}
+            aria-pressed={aiMode}
+            onClick={() => setAi((value) => !value)}
+            title={aiMode ? "AI mode on: finds new recipes" : "Turn on AI mode to find new recipes"}
+          >
+            AI<span className="visually-hidden"> mode: find new recipes</span>
+          </button>
+        )}
+      </Form>
+      {finding && (
+        <p className="ai-finding" role="status">
+          Finding new recipes with AI. This can take up to a minute.
+        </p>
+      )}
+    </div>
   );
 }
 

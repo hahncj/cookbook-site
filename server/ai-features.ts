@@ -5,6 +5,7 @@ import type { AiResult, ImageInput } from "./core/ai";
 import { detectImageType } from "./core/images";
 import { MAX_IMPORT_TEXT, extractJsonLdRecipe, htmlToText, type RecipeDraft } from "./core/imports";
 import type { DuplicateMatch } from "./core/duplicates";
+import { z } from "zod";
 import { readPhotoBytes } from "./photos";
 
 export const MAX_AI_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -96,4 +97,47 @@ export function recipeText(r: { title: string; ingredients: { quantity: string; 
   ]
     .join("\n")
     .slice(0, 20_000);
+}
+
+const writtenSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  description: z.string().max(1_000).nullable(),
+  yieldText: z.string().max(120).nullable(),
+  prepTime: z.string().max(120).nullable(),
+  cookTime: z.string().max(120).nullable(),
+  ingredients: z.array(z.object({ quantity: z.string().max(120), item: z.string().max(120) })).max(200),
+  steps: z.array(z.string().max(2_000)).max(200),
+  notes: z.string().max(2_000).nullable(),
+});
+
+/**
+ * An AI-written recipe from "Find new recipes" (M7, D19), sent back by the
+ * browser when the owner chooses "Save to cookbook". It only fills the
+ * editor; the owner reviews it and presses Save (D2).
+ */
+export function writtenToDraft(json: string): RecipeDraft | null {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(json);
+  } catch {
+    return null;
+  }
+  const parsed = writtenSchema.safeParse(raw);
+  if (!parsed.success) return null;
+  const r = parsed.data;
+  return {
+    kind: "recipe",
+    title: r.title,
+    description: r.description,
+    yieldText: r.yieldText,
+    prepTime: r.prepTime,
+    cookTime: r.cookTime,
+    ingredients: r.ingredients,
+    steps: r.steps,
+    notes: r.notes,
+    sourceUrl: null,
+    sourceName: "Written by AI (Claude)",
+    uncertain: [],
+    otherRecipes: 0,
+  };
 }
