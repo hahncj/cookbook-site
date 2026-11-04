@@ -92,7 +92,7 @@ To apply them by hand (for example after deploying from your machine with `npm r
 npm run db:migrate:remote
 ```
 
-Note: `wrangler d1 export` cannot export databases that contain virtual tables, and the catalog's full-text index (`recipes_fts`) is one. Use D1 Time Travel for point-in-time recovery; the app's own backup (footer → Backup; see backup-restore.md) covers full exports.
+Note: `wrangler d1 export` cannot export databases that contain virtual tables, and the catalog's full-text index (`recipes_fts`) is one. Use D1 Time Travel for point-in-time recovery; the app's own backup (Settings → Admin tools → Backup; see backup-restore.md) covers full exports.
 
 ### Measure CPU time on the free plan (M0)
 
@@ -128,6 +128,41 @@ docker run -d -p 3000:3000 -v cookbook-data:/data \
 The container applies database migrations on startup and stores the SQLite database and photos in the `/data` volume. Any host that runs a Docker image with a persistent volume works (for example Fly.io or Render). Behind a proxy, set `CLIENT_IP_HEADER` to the header that proxy sets. Add the alternative host's callback URL to the Google OAuth client.
 
 Without Docker: `npm ci && npm run build:node && npm run start:node`.
+
+Back up the `/data` volume (or download the app's backup) regularly: on this host there is no D1 Time Travel.
+
+### Move the cookbook to the alternative host
+
+1. Deploy the container as above on the new host, with a persistent volume and a public HTTPS address.
+2. In Google Cloud Console, add the new address to the OAuth client: JavaScript origin `https://<new-host>` and redirect URI `https://<new-host>/api/auth/callback/google`.
+3. On the old site: approve or reject anything waiting in **Review** (waiting items are not in the backup), then **Settings → Admin tools → Backup → Download full backup**.
+4. On the new site: sign in, open **Settings → Admin tools → Backup**, and restore the zip.
+5. Set the approval setting in Settings, create new API keys if you use any, and reconnect ChatGPT and Claude.ai to `https://<new-host>/mcp`.
+6. To keep the same address, point the `cookbook.chrisandelissa.com` DNS record at the new host, set `PUBLIC_BASE_URL` to it, and remove the custom domain route from the Worker.
+
+### What was verified (M8)
+
+`npm run verify:docker` builds the Docker image and runs it twice on this machine (ports 3200 and 3201). It checks health, public pages with noindex, `robots.txt`, search and signed-out refusals, then moves a sample cookbook (recipes, versions, notes, a deleted idea, tags, a collection, a photo, markers and a preference) from the first container to the second, empty one using the app's own backup and restore code. Every backed-up table and the photo bytes match. It removes its containers and files afterwards.
+
+Not verified: a deployment to a real cloud host such as Fly.io or Render. That needs an account (and possibly a card) and is left for the owner to approve. Google sign-in on the alternative host also needs the step 2 callback, so it can only be checked on a real address.
+
+## Provider dependencies
+
+What each outside service does, what breaks without it, and how to replace it. App logic in `server/core/` depends on none of them directly (a lint rule enforces this, AC-038).
+
+| Provider | Used for | Where in the code | If it goes away | Replacement steps |
+| --- | --- | --- | --- | --- |
+| **Cloudflare Workers** | Runs the site | `hosting/cloudflare/worker.ts`, `wrangler.jsonc` | Site is down | Run the Node/Docker host (section 3) on any container host. Same app code; only the entry file differs |
+| **Cloudflare D1** | Database (SQLite) | `server/adapters/` through Drizzle; `db/migrations/` | Data unreachable | Restore your backup into the Node host, which uses a SQLite file with the same schema and migrations. Any SQLite-compatible store works with a new Drizzle driver in a host entry file |
+| **Cloudflare R2** | Photo files | `MediaStore` interface; R2 binding in the Worker | Photos missing | The Node host stores photos on disk (`hosting/node/fs-media.ts`). For S3-compatible storage (S3, Backblaze B2, MinIO), write a small `MediaStore` adapter (put, get, delete, ping); nothing else changes. The backup zip carries every photo |
+| **Cloudflare DNS** | `chrisandelissa.com` zone and the custom-domain route | Cloudflare dashboard | Address stops resolving | Move the zone to another DNS provider and point the record at the new host |
+| **Workers Builds** | Deploys on merge to `main` and applies migrations | Cloudflare dashboard (`npm run deploy:ci`) | No automatic deploys | Deploy by hand (`npm run db:migrate:remote && npm run deploy`) or from any CI with a Cloudflare API token |
+| **Google sign-in** | Admin sign-in | Better Auth (`server/auth/`) | Admins can't sign in; public browsing still works | Better Auth supports other sign-in providers (for example GitHub or a magic link); add one in `server/auth/` and keep the `ADMIN_EMAILS` check |
+| **Anthropic (Claude API)** | All in-app AI | `server/ai/anthropic.ts`, behind the `RecipeAi` interface in `server/core/ai.ts` | AI buttons say AI isn't set up; everything else works (AC-036) | Another model provider needs a new `RecipeAi` adapter. AI search's Web mode also needs a web-search tool from that provider |
+| **Pixabay**, **Brave Search** | Find a photo (optional) | `server/importers/` | Those photo sources switch off | Leave unset, or replace with another image API in the photo finder |
+| **ChatGPT, Claude.ai** | Send recipes in through MCP | `server/mcp/`, `server/api-v1.ts` | Nothing in the site breaks | Any MCP client or plain HTTP client works (see [integration.md](integration.md)) |
+
+D1 Time Travel is the one Cloudflare-only safety net: on another host, your downloaded backups (and volume snapshots, if the host offers them) replace it.
 
 ## 4. Connect ChatGPT and Claude.ai
 

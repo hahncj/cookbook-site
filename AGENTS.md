@@ -13,7 +13,8 @@ Requirements are in `docs/requirements/`. Owner decisions (D1–D18), the stack,
 - `npm run check`: typecheck (runs typegen first), lint, and all unit/integration tests. Run before calling work done.
 - `npm test`: Vitest only. Single file: `npx vitest run tests/server/m5.test.ts`. Single test: add `-t "test name"`.
 - `npm run test:e2e`: Playwright. It builds the Node host, runs it on :3100 against a throwaway SQLite DB in `.e2e/`, plus an empty second instance on :3101 (restore target, no AI key) and a mock Anthropic API on :3102. One project: `npx playwright test tests/e2e/m5.spec.ts --project=desktop`. Other projects: `phone-chromium`, `phone-webkit`, `tablet`. All depend on the `setup` seed project.
-- `npm run smoke:ai`: live Claude API test (`tests/live/`). Costs money; run it only when asked.
+- `npm run smoke:ai`: live Claude API test (`tests/live/`), including AI search and AI help with a cost/timing table. Costs money; run it only when asked.
+- `npm run verify:docker`: builds the Docker image and moves a sample cookbook between two local containers with backup/restore (`tests/docker/`). Needs Docker; free.
 - `npm run dev`: dev server in the Cloudflare runtime. Needs `hosting/cloudflare/.dev.vars` (copy from `.dev.vars.example`).
 - `npm run db:generate`: create a migration after changing `server/db/`. `npm run db:migrate:local` applies it to local D1.
 - `npm run auth:schema`: regenerate `server/db/auth-schema.ts` after changing Better Auth plugins.

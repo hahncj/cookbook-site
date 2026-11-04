@@ -12,3 +12,4 @@ coverage/
 .e2e-fresh/
 test-results/
 playwright-report/
+.docker-check/
