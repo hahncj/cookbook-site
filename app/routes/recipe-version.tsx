@@ -26,7 +26,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  return [{ title: loaderData ? `Version ${loaderData.version.revision} · ${loaderData.title} · Cookbook` : "Version · Cookbook" }];
+  return [{ title: loaderData ? `Version ${loaderData.version.revision} · ${loaderData.title} · 540 Kitchen` : "Version · 540 Kitchen" }];
 }
 
 // POST: restore this version as a new version (admin only, with a conflict check).

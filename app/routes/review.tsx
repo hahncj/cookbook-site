@@ -8,7 +8,7 @@ import { servicesContext } from "../context";
 import type { Route } from "./+types/review";
 
 export function meta() {
-  return [{ title: "Review AI submissions · Cookbook" }];
+  return [{ title: "Review AI submissions · 540 Kitchen" }];
 }
 
 function view(submission: Submission) {

@@ -5,7 +5,7 @@ import { emptyFormValues, saveEntryAction } from "../entry-form.server";
 import type { Route } from "./+types/recipe-new";
 
 export function meta() {
-  return [{ title: "Add a recipe · Cookbook" }];
+  return [{ title: "Add a recipe · 540 Kitchen" }];
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {

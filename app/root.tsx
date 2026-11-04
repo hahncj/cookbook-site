@@ -56,6 +56,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {/* D10: keep the site out of search engines. */}
         <meta name="robots" content="noindex, nofollow" />
         <meta name="color-scheme" content={theme === "system" ? "light dark" : theme} />
+        <link rel="icon" type="image/png" sizes="32x32" href="/brand/logo-32.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/brand/logo-192.png" />
+        <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
+        <link rel="manifest" href="/site.webmanifest" />
+        <meta name="apple-mobile-web-app-title" content="540 Kitchen" />
+        <meta name="application-name" content="540 Kitchen" />
+        <meta name="theme-color" content="#f7f4ec" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#171a21" media="(prefers-color-scheme: dark)" />
         <Meta />
         <Links />
       </head>
@@ -77,7 +85,17 @@ function SiteHeader() {
     <header className="site-header">
       <div className="container site-header-inner">
         <Link to="/" className="brand">
-          Cookbook
+          <img
+            src="/brand/logo-96.png"
+            srcSet="/brand/logo-96.png 2x, /brand/logo-144.png 3x"
+            width={48}
+            height={48}
+            alt="540 Kitchen"
+            className="brand-logo"
+          />
+          <span className="brand-name" aria-hidden="true">
+            540 Kitchen
+          </span>
         </Link>
         <Form method="get" action="/" role="search" className="search header-search">
           <label htmlFor="site-search" className="visually-hidden">

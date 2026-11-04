@@ -4,7 +4,7 @@ import { servicesContext } from "../context";
 import type { Route } from "./+types/deleted";
 
 export function meta() {
-  return [{ title: "Deleted recipes · Cookbook" }];
+  return [{ title: "Deleted recipes · 540 Kitchen" }];
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {

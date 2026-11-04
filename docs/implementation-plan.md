@@ -25,6 +25,7 @@ Milestones are implemented one at a time. Each milestone starts only when the ow
 | D15 | Database is **Cloudflare D1** (owner choice), accessed only through an adapter. D1 is a documented Cloudflare dependency. |
 | D16 | Use the **Cloudflare Workers free plan**. If measured CPU time exceeds free-plan limits, moving to the paid plan is the owner's decision. **2026-11-03:** measured production CPU exceeds the 10 ms limit (medians 11–34 ms; see M0 status) with no failures observed; the owner chose to **stay on the free plan and watch for errors** (Cloudflare error 1102 / `exceededCpu`). Revisit if failures appear. |
 | D17 | **Visual direction A · Kitchen Notebook** (approved 2026-11-03) with a **viewer-selectable theme**: System default (follows the device), Light, or Dark. Proposed: the choice is remembered on the device for any visitor. Mockups and palettes: [design/m1/](../design/m1/README.md). |
+| D18 | The site is named **540 Kitchen** (2026-11-03), with the owner's logo (source: `design/brand/540-kitchen-logo.png`) in the header and as the browser, Home Screen and app icon. |
 
 ## Technology stack
 

@@ -13,7 +13,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  return [{ title: loaderData ? `History · ${loaderData.title} · Cookbook` : "History · Cookbook" }];
+  return [{ title: loaderData ? `History · ${loaderData.title} · 540 Kitchen` : "History · 540 Kitchen" }];
 }
 
 export function originLabel(version: Pick<RevisionInfo, "origin" | "restoredFrom">): string {

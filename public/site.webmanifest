@@ -1,0 +1,14 @@
+{
+  "name": "540 Kitchen",
+  "short_name": "540 Kitchen",
+  "description": "Our recipes and food ideas, in one place.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#b35534",
+  "theme_color": "#b35534",
+  "icons": [
+    { "src": "/brand/logo-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/logo-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
