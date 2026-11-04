@@ -323,11 +323,17 @@ export function createSubmissions({ repo, catalog, now, newId }: SubmissionsDeps
     countPending: () => repo.countPending(),
 
     /** Admin approval (AC-013). Only admins reach this; tools have no way to call it (AC-029). */
-    async approve(id: string, admin: Actor) {
+    async approve(id: string, admin: Actor, options: { photoIds?: string[] } = {}) {
       const submission = await repo.get(id);
       if (!submission) return null;
       if (submission.status !== "pending") return submission;
-      return apply(submission, admin.userId);
+      // A photo the admin found while reviewing a new entry with none (E1).
+      const photoIds = [...new Set((options.photoIds ?? []).map((p) => p.toLowerCase()).filter((p) => /^[0-9a-f-]{36}$/.test(p)))].slice(0, 20);
+      const withPhotos =
+        submission.type === "create" && submission.proposed.photos.length === 0 && photoIds.length > 0
+          ? { ...submission, proposed: { ...submission.proposed, photos: photoIds.map((photoId) => ({ id: photoId, caption: "" })) } }
+          : submission;
+      return apply(withPhotos, admin.userId);
     },
 
     /** Admin rejection: the catalog is unchanged and no version is recorded (AC-013, AC-059). */

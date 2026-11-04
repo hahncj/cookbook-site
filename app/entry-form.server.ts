@@ -3,6 +3,7 @@ import type { Services } from "../server/app";
 import { parseTagList, validateEntry, type Entry, type FieldErrors } from "../server/core/recipes";
 import type { RecipeDraft } from "../server/core/imports";
 import { requireAdminWrite } from "./admin.server";
+import { photoCredits } from "../server/photos";
 
 /** Raw editor values, echoed back on errors so nothing typed is lost (AC-048). */
 export interface EntryFormValues {
@@ -20,7 +21,8 @@ export interface EntryFormValues {
   tags: string;
   collectionIds: string[];
   newCollection: string;
-  photos: { id: string; caption: string }[];
+  /** `credit` is display-only (E1): it lives on the stored photo, not in the form. */
+  photos: { id: string; caption: string; credit?: string | null }[];
   changeNote: string;
   revision: number;
   /** Where a new entry came from (set by imports); ignored on edits. */
@@ -124,6 +126,12 @@ export function draftToFormValues(draft: RecipeDraft, origin: EntryFormValues["o
   };
 }
 
+/** Adds each stored photo's credit line (E1) for display in the editor. */
+export async function withPhotoCredits(services: Services, photos: { id: string; caption: string }[]) {
+  const credits = await photoCredits(services.db, photos.map((p) => p.id));
+  return photos.map((p) => ({ ...p, credit: credits[p.id.toLowerCase()] ?? null }));
+}
+
 export interface EntryActionData {
   errors: FieldErrors;
   values: EntryFormValues;
@@ -160,6 +168,7 @@ export async function saveEntryAction(request: Request, services: Services, targ
   });
   const echo = { ...values, collectionIds, newCollection: errors.collectionIds ? values.newCollection : "" };
   if (!result.ok || Object.keys(errors).length > 0) {
+    echo.photos = await withPhotoCredits(services, values.photos);
     return data<EntryActionData>({ errors: { ...errors, ...(result.ok ? {} : result.errors) }, values: echo }, { status: 400 });
   }
 
@@ -170,6 +179,7 @@ export async function saveEntryAction(request: Request, services: Services, targ
     : await services.catalog.create(result.value, actor, { changeNote, origin: values.origin });
 
   if (!saved.ok) {
+    echo.photos = await withPhotoCredits(services, values.photos);
     const message =
       saved.reason === "conflict"
         ? "This recipe changed since you opened it, so your edit wasn't saved. Copy anything you need, then reload to see the latest version."

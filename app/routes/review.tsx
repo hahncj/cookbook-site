@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Form, Link, useNavigation } from "react-router";
 import { diffSnapshots, snapshotOf } from "../../server/core/history";
 import { ingredientLine } from "../../server/core/recipes";
@@ -5,6 +6,9 @@ import type { Submission } from "../../server/core/submissions";
 import { requireAdminPage, requireAdminWrite } from "../admin.server";
 import { ChangeList } from "../components/change-list";
 import { DuplicateNotice } from "../components/duplicate-notice";
+import { FindPhoto, type FoundPhoto } from "../components/find-photo";
+import { CloseIcon } from "../components/icons";
+import { photoUrl } from "../photo-prepare";
 import { servicesContext } from "../context";
 import type { Route } from "./+types/review";
 
@@ -58,7 +62,13 @@ export async function action({ request, context }: Route.ActionArgs) {
   const id = String(form.get("id") ?? "");
   const intent = form.get("intent");
   const actor = { userId: admin.userId };
-  const result = intent === "approve" ? await services.submissions.approve(id, actor) : intent === "reject" ? await services.submissions.reject(id, actor) : null;
+  const photoIds = form.getAll("photoId").map(String);
+  const result =
+    intent === "approve"
+      ? await services.submissions.approve(id, actor, { photoIds })
+      : intent === "reject"
+        ? await services.submissions.reject(id, actor)
+        : null;
   if (!result) return { message: "That submission no longer exists." };
   if (intent === "approve" && result.status === "conflict") return { message: result.message ?? "It couldn't be applied because the recipe changed." };
   return { message: null };
@@ -96,6 +106,35 @@ function Preview({ proposed }: { proposed: ReturnType<typeof view>["proposed"] }
       {proposed.notes && <div className="notes-box">{proposed.notes}</div>}
       {proposed.tags.length > 0 && <p className="muted">Tags: {proposed.tags.join(", ")}</p>}
     </details>
+  );
+}
+
+/** Find a photo (E1) for a new entry that arrived without one. Saved only on approval. */
+function ReviewPhoto({ item }: { item: { id: string; title: string; proposed: { sourceUrl: string | null; sourceName: string | null } } }) {
+  const [photo, setPhoto] = useState<FoundPhoto | null>(null);
+  if (photo) {
+    return (
+      <div className="review-photo">
+        <input type="hidden" name="photoId" value={photo.id} />
+        <img src={photoUrl(photo.id, "thumb")} alt={`Chosen photo for ${item.title}`} width={96} height={96} />
+        <div>
+          <p className="hint" style={{ margin: 0 }}>Added when you approve.</p>
+          {photo.credit && <p className="photo-credit">{photo.credit}</p>}
+          <button type="button" className="btn" onClick={() => setPhoto(null)} style={{ marginTop: 6 }}>
+            <CloseIcon />
+            Remove photo
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="photo-buttons review-find-photo">
+      <FindPhoto
+        query={() => ({ title: item.title, sourceUrl: item.proposed.sourceUrl ?? "", sourceName: item.proposed.sourceName ?? "" })}
+        onAdded={setPhoto}
+      />
+    </div>
   );
 }
 
@@ -150,7 +189,9 @@ export default function Review({ loaderData, actionData }: Route.ComponentProps)
               })}
             />
 
-            <Form method="post" className="review-actions">
+            <Form method="post">
+              {item.status === "pending" && item.type === "create" && item.proposed.photos.length === 0 && <ReviewPhoto item={item} />}
+              <div className="review-actions">
               <input type="hidden" name="id" value={item.id} />
               {item.status === "pending" && (
                 <button type="submit" name="intent" value="approve" className="btn btn-primary" disabled={busyId === item.id}>
@@ -160,6 +201,7 @@ export default function Review({ loaderData, actionData }: Route.ComponentProps)
               <button type="submit" name="intent" value="reject" className="btn" disabled={busyId === item.id}>
                 {item.status === "conflict" ? "Dismiss" : "Reject"}
               </button>
+              </div>
             </Form>
           </article>
         ))

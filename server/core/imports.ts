@@ -150,8 +150,8 @@ function yieldText(value: unknown): string | null {
   return /^\d+$/.test(best) ? `Serves ${best}` : best;
 }
 
-/** Reads a schema.org Recipe from the page's JSON-LD, if present. Free and exact: no AI involved. */
-export function extractJsonLdRecipe(html: string, url: string): RecipeDraft | null {
+/** Every schema.org Recipe object in the page's JSON-LD blocks. */
+export function jsonLdRecipes(html: string): Record<string, unknown>[] {
   const blocks = [...html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
   const recipes: Record<string, unknown>[] = [];
   for (const block of blocks) {
@@ -161,6 +161,12 @@ export function extractJsonLdRecipe(html: string, url: string): RecipeDraft | nu
       // Ignore malformed blocks; other blocks may still have the recipe.
     }
   }
+  return recipes;
+}
+
+/** Reads a schema.org Recipe from the page's JSON-LD, if present. Free and exact: no AI involved. */
+export function extractJsonLdRecipe(html: string, url: string): RecipeDraft | null {
+  const recipes = jsonLdRecipes(html);
   const recipe = recipes[0];
   if (!recipe) return null;
   const title = clean(recipe.name);

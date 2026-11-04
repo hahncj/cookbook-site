@@ -86,6 +86,8 @@ const ROW_SCHEMAS: Record<BackupTable, z.ZodType> = {
     thumbBytes: z.number().int().nonnegative(),
     createdAt: ms,
     createdBy: nullableText(64),
+    // Added with E1; older backups have no credit.
+    credit: nullableText(200).optional().default(null),
   }),
   recipe_revisions: z.object({
     recipeId: id,

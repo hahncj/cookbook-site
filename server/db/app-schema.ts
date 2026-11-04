@@ -95,6 +95,8 @@ export const photos = sqliteTable(
     thumbBytes: integer("thumb_bytes").notNull(),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     createdBy: text("created_by"),
+    /** Credit line for found stock or web photos (E1), e.g. "Photo: Jane Doe / Pexels". Null for uploads. */
+    credit: text("credit"),
   },
   (t) => [index("photos_recipe_idx").on(t.recipeId)],
 );

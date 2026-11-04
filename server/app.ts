@@ -15,7 +15,9 @@ import { isAdminEmail } from "./core/admin";
 import { servePhoto } from "./photos";
 import { notConfigured, type RecipeAi } from "./core/ai";
 import { createAnthropicAi } from "./ai/anthropic";
-import { createPageFetcher, type PageFetcher } from "./importers/fetch-page";
+import { createImageFetcher, createPageFetcher, type ImageFetcher, type PageFetcher } from "./importers/fetch-page";
+import { createPhotoFinder, type PhotoFinder, type PhotoSearchProvider } from "./core/photo-finder";
+import { createBraveImageSearch, createPexelsSearch } from "./importers/photo-search";
 
 /** Everything a request handler may use. Built per request by the host adapter. */
 export interface Services {
@@ -30,6 +32,10 @@ export interface Services {
   ai: RecipeAi;
   /** Fetches web pages for link import, with SSRF protection. */
   fetchPage: PageFetcher;
+  /** Find a photo (E1): source page, stock, then web. Admin-only callers. */
+  photoFinder: PhotoFinder;
+  /** Downloads a chosen photo, with the same SSRF protection as fetchPage. */
+  fetchImage: ImageFetcher;
 }
 
 export interface HostDeps {
@@ -40,12 +46,18 @@ export interface HostDeps {
   /** Tests inject fakes. */
   ai?: RecipeAi;
   fetchPage?: PageFetcher;
+  fetchImage?: ImageFetcher;
+  /** Fakes for the stock and web photo searches; null turns one off. */
+  photoStock?: PhotoSearchProvider | null;
+  photoWeb?: PhotoSearchProvider | null;
 }
 
 export function createServices(deps: HostDeps): Services {
   const newId = () => crypto.randomUUID();
   const now = () => new Date();
   const catalog = createCatalog({ repo: createCatalogRepository(deps.db, newId), now, newId });
+  const fetchPage = deps.fetchPage ?? createPageFetcher();
+  const { pexels, brave } = deps.config.photoSearch;
   return {
     config: deps.config,
     db: deps.db,
@@ -62,7 +74,13 @@ export function createServices(deps: HostDeps): Services {
             baseUrl: deps.config.anthropic.baseUrl ?? undefined,
           })
         : notConfigured),
-    fetchPage: deps.fetchPage ?? createPageFetcher(),
+    fetchPage,
+    photoFinder: createPhotoFinder({
+      fetchPage,
+      stock: deps.photoStock !== undefined ? deps.photoStock : pexels ? createPexelsSearch(pexels) : null,
+      web: deps.photoWeb !== undefined ? deps.photoWeb : brave ? createBraveImageSearch(brave) : null,
+    }),
+    fetchImage: deps.fetchImage ?? createImageFetcher(),
   };
 }
 

@@ -23,7 +23,17 @@ const serverEnv = (baseURL: string, dir: string, port: number) => ({
   MEDIA_DIR: `${dir}/media`,
   // The main instance talks to a local mock of the Claude API (no paid calls);
   // the fresh instance has no key, so it shows AI as not set up (AC-036).
-  ...(port === PORT ? { ANTHROPIC_API_KEY: "mock-key", ANTHROPIC_BASE_URL: "http://localhost:3102" } : {}),
+  // The same mock stands in for the Pexels and Brave photo searches (E1).
+  ...(port === PORT
+    ? {
+        ANTHROPIC_API_KEY: "mock-key",
+        ANTHROPIC_BASE_URL: "http://localhost:3102",
+        PEXELS_API_KEY: "mock-key",
+        PEXELS_BASE_URL: "http://localhost:3102",
+        BRAVE_SEARCH_API_KEY: "mock-key",
+        BRAVE_SEARCH_BASE_URL: "http://localhost:3102",
+      }
+    : {}),
 });
 
 export default defineConfig({

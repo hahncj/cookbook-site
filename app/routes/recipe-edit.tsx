@@ -2,7 +2,7 @@ import { Form, data, redirect, useNavigation } from "react-router";
 import { requireAdminPage, requireAdminWrite } from "../admin.server";
 import { EntryForm } from "../components/entry-form";
 import { servicesContext } from "../context";
-import { entryToFormValues, saveEntryAction } from "../entry-form.server";
+import { entryToFormValues, saveEntryAction, withPhotoCredits } from "../entry-form.server";
 import type { Route } from "./+types/recipe-edit";
 
 export function meta({ loaderData: loaded }: Route.MetaArgs) {
@@ -16,7 +16,7 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
   if (!entry) throw data("Not found", { status: 404 });
   return {
     id: entry.id,
-    values: entryToFormValues(entry),
+    values: { ...entryToFormValues(entry), photos: await withPhotoCredits(services, entry.photos) },
     collections: await services.catalog.listCollections(),
     aiEnabled: services.ai.configured,
   };

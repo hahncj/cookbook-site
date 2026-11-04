@@ -50,15 +50,17 @@ export async function preparePhoto(file: Blob): Promise<{ full: Blob; thumb: Blo
   return { full, thumb };
 }
 
-export async function uploadPhoto(file: Blob): Promise<{ id: string; width: number; height: number }> {
+/** Resizes and stores a photo. `credit` is only for photos chosen with Find a photo (E1). */
+export async function uploadPhoto(file: Blob, credit?: string): Promise<{ id: string; width: number; height: number; credit: string | null }> {
   const { full, thumb } = await preparePhoto(file);
   const body = new FormData();
   body.append("full", full, "photo.jpg");
   body.append("thumb", thumb, "thumb.jpg");
+  if (credit) body.append("credit", credit);
   const response = await fetch("/api/photos", { method: "POST", body });
-  const result = (await response.json().catch(() => ({}))) as { id?: string; width?: number; height?: number; message?: string };
+  const result = (await response.json().catch(() => ({}))) as { id?: string; width?: number; height?: number; credit?: string | null; message?: string };
   if (!response.ok || !result.id) throw new PhotoPrepareError(result.message ?? "The photo couldn't be saved. Please try again.");
-  return { id: result.id, width: result.width ?? 0, height: result.height ?? 0 };
+  return { id: result.id, width: result.width ?? 0, height: result.height ?? 0, credit: result.credit ?? null };
 }
 
 export const photoUrl = (id: string, size: "full" | "thumb" = "full") => `/media/photos/${id}${size === "thumb" ? "/thumb" : ""}`;

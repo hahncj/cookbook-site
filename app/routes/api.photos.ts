@@ -4,7 +4,8 @@ import { storePhoto } from "../../server/photos";
 import type { Route } from "./+types/api.photos";
 
 // POST /api/photos — multipart with `full` and `thumb` image files (already
-// resized in the browser). Admin only. Returns the stored photo's id and size.
+// resized in the browser), and `credit` only for a photo chosen with Find a
+// photo (E1). Admin only. Returns the stored photo's id, size and credit.
 export async function action({ request, context }: Route.ActionArgs) {
   const services = context.get(servicesContext);
   const admin = await requireAdminWrite(request, services);
@@ -23,6 +24,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     { db: services.db, media: services.media, newId: () => crypto.randomUUID(), now: () => new Date() },
     { full: new Uint8Array(await full.arrayBuffer()), thumb: new Uint8Array(await thumb.arrayBuffer()) },
     { userId: admin.userId },
+    form.get("credit"),
   );
   return result.ok ? Response.json(result.photo, { status: 201 }) : Response.json({ message: result.message }, { status: result.status });
 }
