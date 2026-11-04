@@ -31,10 +31,13 @@ const section = (page: Page, name: string) => page.getByRole("region", { name })
 
 const aiToggle = (page: Page) => page.getByRole("banner").getByRole("button", { name: "AI mode: find new recipes" });
 
-/** Turns on AI mode in the header search bar and asks for new recipes. */
-async function findWithAi(page: Page, request: string) {
-  await aiToggle(page).click();
+/** Turns on AI mode in the header search bar, picks the source and preferences, and asks for new recipes. */
+async function findWithAi(page: Page, request: string, options: { source?: "Write with AI" | "Find on the web"; prefs?: boolean } = {}) {
+  if ((await aiToggle(page).getAttribute("aria-pressed")) !== "true") await aiToggle(page).click();
   await expect(aiToggle(page)).toHaveAttribute("aria-pressed", "true");
+  const banner = page.getByRole("banner");
+  await banner.getByRole("radio", { name: options.source ?? "Write with AI" }).check();
+  await banner.getByRole("checkbox", { name: "Use my preferences" }).setChecked(options.prefs ?? true);
   const box = page.getByRole("searchbox", { name: "Describe new recipes to find with AI" });
   await box.fill(request);
   await box.press("Enter");
@@ -92,33 +95,20 @@ test.describe("preferences (AC-016, AC-017, AC-035)", () => {
 });
 
 test.describe("AI mode in the search bar (AC-015, AC-034)", () => {
-  test("finds new web recipes and AI-written ones, labeled, and saving goes through the editor", async ({ page, context }) => {
+  test("Write with AI: labeled AI-written recipes that save through the editor; preferences can be turned off", async ({ page, context }) => {
     await signInAsAdmin(context);
     await page.goto("/");
     await expect(aiToggle(page)).toHaveAttribute("aria-pressed", "false");
-    await findWithAi(page, "noodles tonight");
+    await findWithAi(page, "noodles tonight", { prefs: false });
 
     const results = page.getByRole("region", { name: /New recipes for/ });
-    // AC-034: web recipes are labeled, link to their source, and say the page was read.
-    const webCard = results.getByRole("listitem").filter({ hasText: "From the web" });
-    await expect(webCard).toHaveCount(1);
-    const link = webCard.getByRole("link", { name: /Miso Glazed Eggplant/ });
-    await expect(link).toHaveAttribute("href", "https://recipes.e2e.test/miso-eggplant");
-    await expect(link).toHaveAttribute("target", "_blank");
-    await expect(webCard).toContainText("Source: E2E Recipes (recipes.e2e.test)");
-    await expect(webCard).toContainText("Page read by AI");
-    await expect(webCard.getByRole("link", { name: "Save to cookbook…" })).toHaveAttribute(
-      "href",
-      "/recipes/import?url=https%3A%2F%2Frecipes.e2e.test%2Fmiso-eggplant",
-    );
-    // The invented link is dropped, and the page says so.
-    await expect(results.getByText("Imaginary Pie")).toHaveCount(0);
-    await expect(results.getByText("1 web suggestion was left out because the link couldn't be confirmed.")).toBeVisible();
-
+    await expect(results.getByText("Written by AI · preferences not used")).toBeVisible();
+    await expect(results.getByRole("listitem").filter({ hasText: "From the web" })).toHaveCount(0);
     // D19: AI-written recipes are labeled untested, with the full recipe on request.
     const written = results.getByRole("listitem").filter({ hasText: "Written by AI · untested" });
     await expect(written).toHaveCount(1);
     await expect(written.getByRole("heading", { name: "AI Noodles Tonight Bowl" })).toBeVisible();
+    await expect(written).not.toContainText("Matches your preference");
     await written.getByText("Show ingredients and steps").click();
     await expect(written.getByText("200 g rice noodles")).toBeVisible();
     await expectNoHorizontalScroll(page);
@@ -136,6 +126,38 @@ test.describe("AI mode in the search bar (AC-015, AC-034)", () => {
     await search.fill("gochujang");
     await search.press("Enter");
     await expect(page).toHaveURL(/\/\?q=gochujang/);
+  });
+
+  test("Find on the web: labeled web recipes with verified sources", async ({ page, context }) => {
+    await signInAsAdmin(context);
+    await page.goto("/");
+    await findWithAi(page, "noodles tonight", { source: "Find on the web" });
+
+    const results = page.getByRole("region", { name: /New recipes for/ });
+    await expect(results.getByText("Found on the web · your preferences were used")).toBeVisible();
+    await expect(results.getByRole("listitem").filter({ hasText: "Written by AI" })).toHaveCount(0);
+    // AC-034: web recipes are labeled, link to their source, and say the page was read.
+    const webCard = results.getByRole("listitem").filter({ hasText: "From the web" });
+    await expect(webCard).toHaveCount(1);
+    const link = webCard.getByRole("link", { name: /Miso Glazed Eggplant/ });
+    await expect(link).toHaveAttribute("href", "https://recipes.e2e.test/miso-eggplant");
+    await expect(link).toHaveAttribute("target", "_blank");
+    await expect(webCard).toContainText("Source: E2E Recipes (recipes.e2e.test)");
+    await expect(webCard).toContainText("Page read by AI");
+    await expect(webCard.getByRole("link", { name: "Save to cookbook…" })).toHaveAttribute(
+      "href",
+      "/recipes/import?url=https%3A%2F%2Frecipes.e2e.test%2Fmiso-eggplant",
+    );
+    // The invented link is dropped, and the page says so.
+    await expect(results.getByText("Imaginary Pie")).toHaveCount(0);
+    await expect(results.getByText("1 web suggestion was left out because the link couldn't be confirmed.")).toBeVisible();
+    await expectNoHorizontalScroll(page);
+    await expectAccessible(page);
+
+    // The choice of source is remembered on this device.
+    await page.goto("/");
+    await aiToggle(page).click();
+    await expect(page.getByRole("banner").getByRole("radio", { name: "Find on the web" })).toBeChecked();
   });
 
   test("only admins get AI mode; without an API key it says AI isn't set up", async ({ page, context }) => {

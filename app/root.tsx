@@ -126,8 +126,27 @@ function HeaderSearch({ query, isAdmin }: { query: string; isAdmin: boolean }) {
   const onDiscover = location.pathname === "/discover";
   const [ai, setAi] = useState(onDiscover);
   useEffect(() => setAi(onDiscover), [onDiscover]);
+  // The source and preference choices are remembered on this device.
+  const [source, setSource] = useState<"write" | "web">("write");
+  const [usePrefs, setUsePrefs] = useState(true);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("aiSource") === "web") setSource("web");
+      if (localStorage.getItem("aiPrefs") === "off") setUsePrefs(false);
+    } catch {
+      // Storage unavailable: keep the defaults.
+    }
+  }, []);
+  const remember = (key: string, value: string) => {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // Storage unavailable: the choice lasts for this page only.
+    }
+  };
   const aiMode = isAdmin && ai;
   const finding = navigation.state === "submitting" && navigation.formAction === "/discover";
+  const findingWeb = finding && navigation.formData?.get("source") === "web";
   return (
     <div className="header-search">
       <Form method={aiMode ? "post" : "get"} action={aiMode ? "/discover" : "/"} role="search" className={`search${isAdmin ? " search-with-ai" : ""}`}>
@@ -145,6 +164,7 @@ function HeaderSearch({ query, isAdmin }: { query: string; isAdmin: boolean }) {
           maxLength={aiMode ? 500 : undefined}
           required={aiMode}
           readOnly={finding}
+          aria-describedby={aiMode ? "ai-options" : undefined}
         />
         {isAdmin && (
           <button
@@ -157,10 +177,40 @@ function HeaderSearch({ query, isAdmin }: { query: string; isAdmin: boolean }) {
             AI<span className="visually-hidden"> mode: find new recipes</span>
           </button>
         )}
+        {aiMode && (
+          <div className="ai-options" id="ai-options">
+            <fieldset className="segmented ai-source">
+              <legend className="visually-hidden">Where new recipes come from</legend>
+              <label>
+                <input
+                  type="radio"
+                  name="source"
+                  value="write"
+                  checked={source === "write"}
+                  onChange={() => (setSource("write"), remember("aiSource", "write"))}
+                />
+                Write with AI
+              </label>
+              <label>
+                <input type="radio" name="source" value="web" checked={source === "web"} onChange={() => (setSource("web"), remember("aiSource", "web"))} />
+                Find on the web
+              </label>
+            </fieldset>
+            <label className="check ai-prefs">
+              <input
+                type="checkbox"
+                name="prefs"
+                checked={usePrefs}
+                onChange={(e) => (setUsePrefs(e.target.checked), remember("aiPrefs", e.target.checked ? "on" : "off"))}
+              />
+              Use my preferences
+            </label>
+          </div>
+        )}
       </Form>
       {finding && (
         <p className="ai-finding" role="status">
-          Finding new recipes with AI. This can take up to a minute.
+          {findingWeb ? "Searching the web for new recipes. This can take up to a minute." : "Writing new recipes with AI. This takes about 20 seconds."}
         </p>
       )}
     </div>

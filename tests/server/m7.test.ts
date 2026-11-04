@@ -204,7 +204,7 @@ describe("preference profile (AC-016, AC-017, AC-035)", () => {
     ]);
 
     // Later AI searches use the correction, and treat the rejection as not true (AC-017).
-    await run(discoverAction(args(post("/discover", { q: "dinner" }, admin))));
+    await run(discoverAction(args(post("/discover", { q: "dinner", prefs: "on" }, admin))));
     const input = discoverInput();
     expect(input.preferences).toEqual([
       { statement: "Likes mild Korean flavors, not too spicy", confirmed: true },
@@ -265,7 +265,7 @@ describe("AI mode finds new recipes (AC-015, AC-034, D19)", () => {
     reason: "Uses what you like.",
   };
 
-  it("returns verified web recipes and AI-written ones, labeled, using the profile and favorites as context", async () => {
+  it("Find on the web: returns verified web recipes only, using the profile and favorites as context", async () => {
     const noodles = await createRecipe("Gochujang Noodles", ["gochujang"]);
     const chili = await createRecipe("Bean Chili", ["beans"]);
     await createRecipe("Saved Eggplant", ["eggplant"], { sourceUrl: "https://www.example.com/eggplant/" });
@@ -292,16 +292,46 @@ describe("AI mode finds new recipes (AC-015, AC-034, D19)", () => {
         ],
       },
     };
-    const response = await run(discoverAction(args(post("/discover", { q: "  something warming  " }, admin))));
+    const response = await run(discoverAction(args(post("/discover", { q: "  something warming  ", source: "web", prefs: "on" }, admin))));
     expect(response.status).toBe(200);
     const result = response.body.result;
-    expect(result.request).toBe("something warming");
+    expect(result).toMatchObject({ request: "something warming", source: "web", usedPreferences: true });
     expect(result.web).toEqual([
       { kind: "web", title: "Miso Glazed Eggplant", url: "https://recipes.example.org/miso", sourceName: "Example Recipes", reason: "Similar flavors.", pageRead: true, savedRecipeId: null },
       { kind: "web", title: "Soup", url: "https://recipes.example.org/soup", sourceName: "recipes.example.org", reason: "Warming.", pageRead: false, savedRecipeId: null },
       { kind: "web", title: "Your eggplant", url: "https://example.com/eggplant", sourceName: "Example", reason: "Saved before.", pageRead: false, savedRecipeId: saved },
     ]);
     expect(result.droppedUnverified).toBe(2);
+    // A web search never shows AI-written recipes.
+    expect(result.written).toEqual([]);
+    expect(result.note).toBe("Leeks are in season.");
+
+    const input = discoverInput();
+    expect(input).toMatchObject({ request: "something warming", source: "web" });
+    expect(input.preferences).toEqual([{ statement: "We like dinners under 45 minutes", confirmed: true }]);
+    // Favorites (and often-made recipes) add taste context; saved titles are listed so results are new.
+    expect(input.favorites).toEqual(["Gochujang Noodles"]);
+    expect([...input.cookbookTitles].sort()).toEqual(["Bean Chili", "Gochujang Noodles", "Saved Eggplant"]);
+  });
+
+  it("Write with AI (the default): AI-written recipes only, tidied; preferences can be left out", async () => {
+    const noodles = await createRecipe("Gochujang Noodles", ["gochujang"]);
+    await services.markers.apply(noodles, "favorite_on", actor);
+    await services.preferences.add("We like dinners under 45 minutes", actor);
+    ai.discovery = {
+      ok: true,
+      value: {
+        web: [{ title: "Soup", url: "https://recipes.example.org/soup", sourceName: "", reason: "Warming." }],
+        written: [written, { ...written, title: "No steps", steps: [] }],
+        note: null,
+        webSources: [{ url: "https://recipes.example.org/soup", title: "Soup", read: true }],
+      },
+    };
+    const response = await run(discoverAction(args(post("/discover", { q: "leeks" }, admin))));
+    const result = response.body.result;
+    expect(result).toMatchObject({ source: "write", usedPreferences: false, web: [] });
+    // Without "Use my preferences", no profile or favorites are sent; saved titles still are, to avoid repeats.
+    expect(discoverInput()).toMatchObject({ source: "write", preferences: null, rejected: [], favorites: [], cookbookTitles: ["Gochujang Noodles"] });
     // Incomplete written recipes are dropped; blank rows and steps are tidied.
     expect(result.written).toEqual([
       {
@@ -317,14 +347,6 @@ describe("AI mode finds new recipes (AC-015, AC-034, D19)", () => {
         reason: "Uses what you like.",
       },
     ]);
-    expect(result.note).toBe("Leeks are in season.");
-
-    const input = discoverInput();
-    expect(input.request).toBe("something warming");
-    expect(input.preferences).toEqual([{ statement: "We like dinners under 45 minutes", confirmed: true }]);
-    // Favorites (and often-made recipes) add taste context; saved titles are listed so results are new.
-    expect(input.favorites).toEqual(["Gochujang Noodles"]);
-    expect([...input.cookbookTitles].sort()).toEqual(["Bean Chili", "Gochujang Noodles", "Saved Eggplant"]);
   });
 
   it("explains an empty or long request and AI errors, keeping the request", async () => {
@@ -416,6 +438,7 @@ describe("Claude adapter for AI mode", () => {
   }
   const input: DiscoverInput = {
     request: "dinner",
+    source: "web",
     preferences: [{ statement: "Likes noodles", confirmed: true }],
     rejected: ["Hates rice"],
     favorites: ["Gochujang Noodles"],
@@ -428,19 +451,6 @@ describe("Claude adapter for AI mode", () => {
     name: "submit_suggestions",
     input: {
       web: [{ title: "P", url: "https://found.example/a", source_name: "F", reason: "New." }],
-      written: [
-        {
-          title: "W",
-          description: "",
-          servings: "Serves 2",
-          prep_time: "",
-          cook_time: "",
-          ingredients: [{ quantity: "1", item: "egg" }],
-          steps: ["Cook."],
-          notes: "",
-          reason: "Quick.",
-        },
-      ],
       note: "",
     },
   };
@@ -455,9 +465,7 @@ describe("Claude adapter for AI mode", () => {
       ok: true,
       value: {
         web: [{ title: "P", url: "https://found.example/a", sourceName: "F", reason: "New." }],
-        written: [
-          { title: "W", description: "", servings: "Serves 2", prepTime: "", cookTime: "", ingredients: [{ quantity: "1", item: "egg" }], steps: ["Cook."], notes: "", reason: "Quick." },
-        ],
+        written: [],
         note: null,
         webSources: [{ url: "https://found.example/a", title: "F", read: false }],
       },
@@ -465,6 +473,7 @@ describe("Claude adapter for AI mode", () => {
     expect(requests).toHaveLength(2);
     expect(requests[0]!.model).toBe("claude-opus-5-5");
     expect(requests[0]!.tools!.map((t) => (t as { type?: string; name?: string }).type ?? (t as { name?: string }).name)).toEqual(["web_search_20260209", "web_fetch_20260209", "submit_suggestions"]);
+    expect(requests[0]!.tools!.slice(0, 2).map((t) => (t as { max_uses?: number }).max_uses)).toEqual([6, 4]);
     expect(requests[1]!.messages).toHaveLength(2); // the paused turn sent back, no extra user message
     const prompt = JSON.stringify(requests[0]!.messages);
     expect(prompt).toContain("Likes noodles (confirmed by the owner)");
@@ -480,6 +489,42 @@ describe("Claude adapter for AI mode", () => {
     const result = await createAnthropicAi({ apiKey: "k", client }).discover(input);
     expect(result.ok).toBe(true);
     expect(requests[1]!.messages.at(-1)).toMatchObject({ role: "user" });
+  });
+
+  it("Write with AI is one plain request with no web tools, and can leave preferences out", async () => {
+    const parsed: unknown[] = [];
+    const client = {
+      beta: {
+        messages: {
+          parse: async (params: Anthropic.Beta.MessageCreateParams) => {
+            parsed.push(params);
+            return {
+              stop_reason: "end_turn",
+              parsed_output: {
+                recipes: [{ title: "W", description: "", servings: "Serves 2", prep_time: "", cook_time: "", ingredients: [{ quantity: "1", item: "egg" }], steps: ["Cook."], notes: "", reason: "Quick." }],
+                note: "",
+              },
+            };
+          },
+        },
+      },
+    } as unknown as Anthropic;
+    const result = await createAnthropicAi({ apiKey: "k", client }).discover({ ...input, source: "write", preferences: null, rejected: [], favorites: [] });
+    expect(result).toEqual({
+      ok: true,
+      value: {
+        web: [],
+        written: [{ title: "W", description: "", servings: "Serves 2", prepTime: "", cookTime: "", ingredients: [{ quantity: "1", item: "egg" }], steps: ["Cook."], notes: "", reason: "Quick." }],
+        note: null,
+        webSources: [],
+      },
+    });
+    expect(parsed).toHaveLength(1);
+    const request = parsed[0] as { tools?: unknown; messages: unknown };
+    expect(request.tools).toBeUndefined();
+    const prompt = JSON.stringify(request.messages);
+    expect(prompt).toContain("chose not to use their preferences");
+    expect(prompt).not.toContain("Likes noodles");
   });
 
   it("reports a refusal plainly", async () => {

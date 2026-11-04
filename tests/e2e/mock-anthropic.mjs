@@ -35,18 +35,13 @@ function profile(body) {
 }
 
 /**
- * M7 "find new recipes". It pauses once (pause_turn) to exercise the resume
- * loop, returns search and fetch results, and then submits one real web page,
- * one made-up link the app must drop (AC-034), and one AI-written recipe whose
- * reason echoes the first confirmed preference (AC-017).
+ * M7 "Find on the web". It pauses once (pause_turn) to exercise the resume
+ * loop, returns search and fetch results, and then submits one real web page
+ * and one made-up link the app must drop (AC-034).
  */
 function discover(body) {
   const text = userText(body);
   const request = between(text, "<request>", "</request>");
-  const confirmed = between(text, "Preference profile:", "\n\n")
-    .split("\n")
-    .filter((line) => line.includes("(confirmed by the owner)"))
-    .map((line) => line.replace(/^- /, "").replace(" (confirmed by the owner)", ""));
   const submit = {
     type: "tool_use",
     id: "toolu_submit",
@@ -55,22 +50,6 @@ function discover(body) {
       web: [
         { title: "Miso Glazed Eggplant", url: "https://recipes.e2e.test/miso-eggplant", source_name: "E2E Recipes", reason: "Something new with similar flavors." },
         { title: "Imaginary Pie", url: "https://invented.e2e.test/pie", source_name: "Nowhere", reason: "Made up." },
-      ],
-      written: [
-        {
-          title: `AI ${request.replace(/\b\w/g, (c) => c.toUpperCase())} Bowl`,
-          description: "A quick bowl built around your request.",
-          servings: "Serves 2",
-          prep_time: "10 min",
-          cook_time: "15 min",
-          ingredients: [
-            { quantity: "200 g", item: "rice noodles" },
-            { quantity: "1 tbsp", item: "soy sauce" },
-          ],
-          steps: ["Soak the noodles.", "Toss with the sauce."],
-          notes: "",
-          reason: [`Fits “${request}”.`, confirmed[0] ? `Matches your preference: ${confirmed[0]}.` : ""].filter(Boolean).join(" "),
-        },
       ],
       note: "",
     },
@@ -130,6 +109,33 @@ function answer(body) {
     };
   }
   if (system.includes("study a family cookbook")) return profile(body);
+  if (system.includes("You write NEW recipes")) {
+    const text = userText(body);
+    const request = between(text, "<request>", "</request>");
+    const confirmed = between(text, "Preference profile:", "\n\n")
+      .split("\n")
+      .filter((line) => line.includes("(confirmed by the owner)"))
+      .map((line) => line.replace(/^- /, "").replace(" (confirmed by the owner)", ""));
+    return {
+      recipes: [
+        {
+          title: `AI ${request.replace(/\b\w/g, (c) => c.toUpperCase())} Bowl`,
+          description: "A quick bowl built around your request.",
+          servings: "Serves 2",
+          prep_time: "10 min",
+          cook_time: "15 min",
+          ingredients: [
+            { quantity: "200 g", item: "rice noodles" },
+            { quantity: "1 tbsp", item: "soy sauce" },
+          ],
+          steps: ["Soak the noodles.", "Toss with the sauce."],
+          notes: "",
+          reason: [`Fits “${request}”.`, confirmed[0] ? `Matches your preference: ${confirmed[0]}.` : ""].filter(Boolean).join(" "),
+        },
+      ],
+      note: "",
+    };
+  }
   if (system.includes("missing an ingredient")) {
     const missing = userText(body).match(/Missing ingredient: (.+)/)?.[1] ?? "it";
     return {
