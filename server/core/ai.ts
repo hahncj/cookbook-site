@@ -97,6 +97,26 @@ export interface DiscoveryDraft {
   webSources: WebSourceSeen[];
 }
 
+/** One saved recipe as the AI sees it for "AI help" on the recipe page. */
+export interface RecipeForHelp {
+  title: string;
+  yieldText: string | null;
+  ingredients: { quantity: string; item: string }[];
+  steps: string[];
+  notes: string | null;
+}
+
+/** A swap for a missing ingredient. Amounts are the AI's suggestion (D20). */
+export interface SubstituteOption {
+  use: string;
+  amount: string;
+  how: string;
+  effect: string;
+}
+
+/** A changed version of a saved recipe (D20): reviewed in the editor before anything is saved. */
+export type RevisedRecipe = Omit<WrittenRecipe, "reason">;
+
 export type AiFailure = "not_configured" | "no_recipe" | "refused" | "failed";
 
 export type AiResult<T> = { ok: true; value: T } | { ok: false; reason: AiFailure; message: string };
@@ -113,6 +133,19 @@ export interface RecipeAi {
   inferPreferences(input: ProfileInput): Promise<AiResult<{ preferences: InferredPreference[]; note: string | null }>>;
   /** Finds new recipes on the web and writes new ones, guided by the preference profile (M7). */
   discover(input: DiscoverInput): Promise<AiResult<DiscoveryDraft>>;
+  /** Swaps for a missing ingredient in a saved recipe (D20). */
+  suggestSubstitutes(input: {
+    recipe: RecipeForHelp;
+    ingredient: string;
+    have: string | null;
+    preferences: string[];
+  }): Promise<AiResult<{ options: SubstituteOption[]; message: string | null }>>;
+  /** A changed version of a saved recipe, with a plain list of what changed (D20). */
+  reviseRecipe(input: {
+    recipe: RecipeForHelp;
+    request: string;
+    preferences: string[];
+  }): Promise<AiResult<{ recipe: RevisedRecipe; changes: string[]; message: string | null }>>;
 }
 
 export const notConfigured: RecipeAi = {
@@ -122,6 +155,8 @@ export const notConfigured: RecipeAi = {
   compareRecipes: async () => ({ ok: false, reason: "not_configured", message: AI_NOT_CONFIGURED }),
   inferPreferences: async () => ({ ok: false, reason: "not_configured", message: AI_NOT_CONFIGURED }),
   discover: async () => ({ ok: false, reason: "not_configured", message: AI_NOT_CONFIGURED }),
+  suggestSubstitutes: async () => ({ ok: false, reason: "not_configured", message: AI_NOT_CONFIGURED }),
+  reviseRecipe: async () => ({ ok: false, reason: "not_configured", message: AI_NOT_CONFIGURED }),
 };
 
 export const AI_NOT_CONFIGURED = "AI features aren't set up yet (no Anthropic API key). Everything else works normally.";

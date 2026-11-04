@@ -130,6 +130,41 @@ function answer(body) {
     };
   }
   if (system.includes("study a family cookbook")) return profile(body);
+  if (system.includes("missing an ingredient")) {
+    const missing = userText(body).match(/Missing ingredient: (.+)/)?.[1] ?? "it";
+    return {
+      options: [
+        { use: "plain Greek yogurt", amount: "same amount", how: "Stir it in off the heat.", effect: `A little tangier than ${missing}.` },
+        { use: "sour cream", amount: "same amount", how: "", effect: "Richer." },
+      ],
+      message: "",
+    };
+  }
+  if (system.includes("adapt a home cook")) {
+    const recipe = between(userText(body), "<recipe>", "</recipe>");
+    const request = between(userText(body), "<request>", "</request>");
+    const title = recipe.match(/^Title: (.+)$/m)?.[1] ?? "Recipe";
+    const lines = recipe.split("\n");
+    const ingredients = lines
+      .slice(lines.indexOf("Ingredients:") + 1, lines.indexOf("Steps:"))
+      .map((line) => line.replace(/^- /, ""))
+      .map((line, n) => (n === 0 ? { quantity: "1 can", item: "lentils" } : { quantity: "", item: line }));
+    const first = lines[lines.indexOf("Ingredients:") + 1]?.replace(/^- /, "") ?? "the first ingredient";
+    return {
+      recipe: {
+        title: `${title} (${request})`,
+        description: "",
+        servings: recipe.match(/^Servings: (.+)$/m)?.[1] ?? "",
+        prep_time: "",
+        cook_time: "",
+        ingredients,
+        steps: lines.filter((line) => /^\d+\. /.test(line)).map((line) => line.replace(/^\d+\. /, "")),
+        notes: "",
+      },
+      changes: [`Swapped ${first} for 1 can of lentils`],
+      message: "",
+    };
+  }
   if (system.includes("list the ingredients")) {
     return {
       suggestions: [

@@ -6,6 +6,8 @@ import type {
   ProfileInput,
   RecipeAi,
   RecipeComparison,
+  RevisedRecipe,
+  SubstituteOption,
   DiscoverInput,
   DiscoveryDraft,
 } from "../../server/core/ai";
@@ -56,6 +58,20 @@ export class FakeAi implements RecipeAi {
   async inferPreferences(input: ProfileInput) {
     this.calls.push({ method: "inferPreferences", input });
     return this.profile;
+  }
+  substitutes: AiResult<{ options: SubstituteOption[]; message: string | null }> = {
+    ok: true,
+    value: { options: [{ use: "plain yogurt", amount: "same amount", how: "", effect: "A little tangier." }], message: null },
+  };
+  revision: AiResult<{ recipe: RevisedRecipe; changes: string[]; message: string | null }> = { ok: false, reason: "failed", message: "Set revision in the test." };
+
+  async suggestSubstitutes(input: unknown) {
+    this.calls.push({ method: "suggestSubstitutes", input });
+    return this.substitutes;
+  }
+  async reviseRecipe(input: unknown) {
+    this.calls.push({ method: "reviseRecipe", input });
+    return this.revision;
   }
   async discover(input: DiscoverInput) {
     this.calls.push({ method: "discover", input });

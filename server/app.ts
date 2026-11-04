@@ -16,6 +16,7 @@ import { createMarkers, type Markers } from "./core/markers";
 import { createPreferencesRepository } from "./adapters/preferences-repo";
 import { createPreferences, type Preferences } from "./core/preferences";
 import { createDiscovery, type Discovery } from "./core/discover";
+import { createRecipeHelp, type RecipeHelp } from "./core/recipe-help";
 import { isAdminEmail } from "./core/admin";
 import { servePhoto } from "./photos";
 import { notConfigured, type RecipeAi } from "./core/ai";
@@ -41,6 +42,8 @@ export interface Services {
   preferences: Preferences;
   /** AI mode in the search bar: new recipes from the web or written by AI (M7). Admin-only callers. */
   discovery: Discovery;
+  /** "AI help" on a recipe: swaps and changes (D20). Admin-only callers. */
+  recipeHelp: RecipeHelp;
   /** Fetches web pages for link import, with SSRF protection. */
   fetchPage: PageFetcher;
   /** Find a photo (E1): source page, stock, then web. Admin-only callers. */
@@ -103,6 +106,11 @@ export function createServices(deps: HostDeps): Services {
     submissions: createSubmissions({ repo: createSubmissionsRepository(deps.db), catalog, now, newId }),
     ai,
     preferences,
+    recipeHelp: createRecipeHelp({
+      ai,
+      getRecipe: (id) => catalog.get(id),
+      profile: () => preferences.forDiscovery(),
+    }),
     discovery: createDiscovery({
       ai,
       digestSources: () => catalog.digestSources(),

@@ -27,6 +27,7 @@ Milestones are implemented one at a time. Each milestone starts only when the ow
 | D17 | **Visual direction A · Kitchen Notebook** (approved 2026-11-03) with a **viewer-selectable theme**: System default (follows the device), Light, or Dark. Proposed: the choice is remembered on the device for any visitor. Mockups and palettes: [design/m1/](../design/m1/README.md). |
 | D18 | The site is named **540 Kitchen** (2026-11-03), with the owner's logo (source: `design/brand/540-kitchen-logo.png`) in the header and as the browser, Home Screen and app icon. |
 | D19 | **AI mode in the search bar** (2026-11-04): admins get an "AI" toggle on the search bar. With it on, Claude finds **new** recipes only (not ones already in the cookbook), using the preference profile and favorites as extra context. Results include web recipes (with sources) and recipes Claude **writes itself**, labeled "Written by AI · untested". For these written recipes only, the AI may propose amounts (an exception to "AI never invents quantities"). Any result is saved only through the editor and the owner's Save (D2). Replaces the separate "Ask AI" page. |
+| D20 | **AI help on a recipe** (2026-11-04, E5): admins can ask Claude for swaps when an ingredient is missing, or to change a saved recipe. Swap amounts and changed recipes are AI suggestions, labeled so (a second narrow exception to "AI never invents quantities"). A swap can be kept as a note; a change opens the editor (a new version) or becomes a new recipe. Nothing is saved without the owner's Save (D2). |
 
 ## Technology stack
 
