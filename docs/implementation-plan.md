@@ -348,8 +348,34 @@ Production after merge: `npm run deploy:ci` applies migration 0008. Then check i
 
 **Done when:** AC-018–021, 038–043 are addressed and every AC has a recorded result.
 
+#### M8 status (2026-11-04, branch `feature/m8-verification-handoff`)
+
+Every acceptance criterion now has a recorded result in [acceptance-report.md](acceptance-report.md): **67 pass, 6 partial** (AC-006, 011, 040, 041, 043, 055). Each partial names what is still open. `npm run check`: 229 unit/integration tests; `npm run test:e2e`: all browser checks pass.
+
+| Check | Result | How it was verified |
+| --- | --- | --- |
+| AC-018–021 | Pass | M1 mockups at phone and desktop, approved by the owner (D17); built screens checked at three widths with axe; populated, empty, loading and error states present; owner uses the live site |
+| AC-038 | Pass | Core-isolation lint rule; D1 and R2 only behind adapters; the same code runs on Workers and Node |
+| AC-039, AC-042 | Pass | [deployment.md](deployment.md): Cloudflare, custom domain, Workers Builds, the Docker path, a step-by-step move, and a **provider dependencies** table with replacement steps |
+| AC-040 | Partial | New `npm run verify:docker`: builds the real Docker image and runs two containers; health, noindex, robots.txt, search, signed-out refusals; then moves a sample cookbook with the app's own backup code. **Not done:** a disposable cloud deployment (needs an account; owner's OK) |
+| AC-041 | Partial | Server, browser and Docker restores match row by row, including preferences and photos. **Gap:** pending submissions and the approval setting are not in the backup (documented in [backup-restore.md](backup-restore.md)) |
+| AC-043, AC-055 | Partial | Automated checks pass; owner tested cooking mode on a real iPhone (2026-11-04). The rest is in [device-checklist.md](device-checklist.md) for iPhone Safari, Chrome on iPhone, the Home Screen app and Android: camera, camera denied, wake lock, layout, AI search (AI, Web, More), AI help |
+| Costs | Estimates | [costs.md](costs.md). `npm run smoke:ai` now also runs AI search (AI + More, Web + More) and AI help and prints seconds, tokens, searches and dollars per feature. **Not run** (paid; needs the owner's OK) |
+
+Documentation added or updated: [acceptance-report.md](acceptance-report.md), [device-checklist.md](device-checklist.md), [costs.md](costs.md), [ai-and-approval.md](ai-and-approval.md) (approval, AI search, AI help, preferences), [deployment.md](deployment.md), [backup-restore.md](backup-restore.md) (now under Settings → Admin tools; what isn't included), [integration.md](integration.md) (connector setup and revocation, unchanged apart from links).
+
+**Remaining for the owner:**
+
+1. Run the [device checklist](device-checklist.md) on the four D11 browsers and send back the results.
+2. Ask ChatGPT and Claude.ai each to save a recipe and propose a change, then approve in Review (AC-011).
+3. Decide whether to run `npm run smoke:ai` (estimated under $1) to replace the cost estimates with real numbers.
+4. Decide whether to try a disposable cloud host for the Docker image (AC-040), for example Fly.io or Render.
+5. Optional: perform a D1 Time Travel restore (M0).
+
+No secrets, migrations or production changes are needed for this milestone.
+
 ## Expected running costs
 
 - Cloudflare Workers, D1, R2: $0 within free-plan limits (R2 may need a payment method on file).
-- Claude API: usage-based, estimated cents per import, identification, or recommendation; confirmed in M8.
+- Claude API: usage-based, estimated cents per import, identification, AI search or AI help. Per-feature estimates in [costs.md](costs.md); not yet confirmed with real calls (M8).
 - Domain renewal: separate, existing cost.

@@ -17,6 +17,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "smoke:ai": "vitest run --config vitest.live.config.ts",
+    "verify:docker": "docker build -f hosting/node/Dockerfile -t cookbook-m8 . && vitest run --config vitest.docker.config.ts",
     "check": "npm run typecheck && npm run lint && npm test",
     "auth:schema": "auth generate --config scripts/auth-cli-config.ts --output server/db/auth-schema.ts --yes",
     "db:generate": "drizzle-kit generate",

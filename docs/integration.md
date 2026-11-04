@@ -40,7 +40,7 @@ claude mcp add --transport http cookbook https://cookbook.chrisandelissa.com/mcp
 1. The tool sends a new recipe, or an update to an existing one.
 2. With **approval on** (the default), it waits in **Review**. The catalog doesn't change and the submission isn't public.
 3. The admin approves (it's saved, and appears in the recipe's history as "Changed by an AI tool") or rejects (nothing changes).
-4. With **approval off** (Settings), valid submissions save immediately. Turning approval off doesn't apply anything already waiting.
+4. With **approval off** (**Settings → Approval for AI tools**), valid submissions save immediately. Turning approval off doesn't apply anything already waiting.
 
 Rules both interfaces enforce:
 
@@ -136,6 +136,8 @@ curl https://cookbook.chrisandelissa.com/api/v1/recipes/RECIPE_ID/updates \
 ```
 
 If the recipe is no longer at revision 3, the response is `409` with `"status": "conflict"` and the `currentRevision`.
+
+More on approval and the in-app AI features: [ai-and-approval.md](ai-and-approval.md).
 
 ## Verified
 

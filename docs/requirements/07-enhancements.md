@@ -36,7 +36,7 @@ Labels follow the rest of this package: **Confirmed** means the owner asked for 
 - The credit is saved with the photo, so it stays with the recipe and is included in backups.
 - Photos the admin takes or uploads have no credit line.
 
-### Status — Built 2026-11-04 (awaiting owner review)
+### Status — Merged 2026-11-04 (PR #16)
 
 - **Find a photo** button in the editor's photo field (next to Take photo and Upload) and on Review cards for new entries that have no photo. Candidates are shown; nothing is added until the admin picks one and presses **Use this photo**, and nothing is saved until they save the recipe or approve (D2).
 - Source order as confirmed: the source page's schema.org Recipe `image`, then its `og:image` / `twitter:image`; then **Pixabay** stock photos. **Brave Search** web images are used when those find nothing, or when the admin presses **Search the web for more**. Web results are labeled "From the web" with a copyright reminder. Google Programmable Search was ruled out: it is closed to new customers and shuts down on January 1, 2027. Owner chose Brave on 2026-11-04. Pexels was planned for stock photos but has paused new API keys (since about 2026-09-30), so the owner chose Pixabay on 2026-11-04.
@@ -135,8 +135,8 @@ AI could help while on a recipe: when an ingredient is missing, or to change the
 
 | Item | Status | Notes |
 | --- | --- | --- |
-| E1 | In progress | Built separately. |
-| E2 | Merged 2026-11-04 (PR #15, phone top bar PR #17); same top bar on every screen built 2026-11-04, awaiting review | **Sign in** sits at the right of the top bar and goes straight to Google, returning to the same page. Signed in, the spot shows the Google picture (name too on screens 600px and wider, first letter if no picture) and opens a menu: name and email, Settings, Sign out. Better Auth already saves Google's picture as `user.image`; it is now refreshed on every sign-in (`overrideUserInfoOnSignIn`). `/sign-in` stays for AI tool connections, retitled **Sign in**. Follow-ups: on every screen size, Add is a floating **+** button and Review / Import are in the profile menu, with a dot on the picture when reviews wait. |
+| E1 | Merged 2026-11-04 (PR #16) | See E1 above. |
+| E2 | Merged 2026-11-04 (PR #15, phone top bar PR #17); same top bar on every screen merged 2026-11-04 | **Sign in** sits at the right of the top bar and goes straight to Google, returning to the same page. Signed in, the spot shows the Google picture (name too on screens 600px and wider, first letter if no picture) and opens a menu: name and email, Settings, Sign out. Better Auth already saves Google's picture as `user.image`; it is now refreshed on every sign-in (`overrideUserInfoOnSignIn`). `/sign-in` stays for AI tool connections, retitled **Sign in**. Follow-ups: on every screen size, Add is a floating **+** button and Review / Import are in the profile menu, with a dot on the picture when reviews wait. |
 | E3 | Merged 2026-11-04 (PR #15) | `/settings` is open to everyone. Visitors see Appearance only; admins also see the admin sections, whose actions still refuse signed-out (401) and non-admin (403) requests. Visitors reach it from a gear in the top bar. The footer is gone, since nothing was left in it. |
-| E5 | Built 2026-11-04, awaiting review | See E5 above. Claude Opus 5.5, no web search. Estimated 2–5¢ for swaps and 5–10¢ for a change (estimates, to confirm in M8). |
+| E5 | Merged 2026-11-04 (PR #23) | See E5 above. Claude Opus 5.5, no web search. Estimated 2–5¢ for swaps and 5–10¢ for a change (estimates; `npm run smoke:ai` now measures them, see docs/costs.md). |
 | E4 | Merged 2026-11-04 (PR #15) | **Admin tools** section in Settings links to Backup and Deleted recipes. Both pages are unchanged. |
