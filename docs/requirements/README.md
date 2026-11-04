@@ -32,7 +32,7 @@ Start here, then read the linked files. Keep the requirements split by purpose r
 - Search, tags, collections, version history, experiment notes, deletion recovery (inactive records kept indefinitely), and manual backups.
 - Serving adjustment, screen-awake cooking mode where supported, personal feedback, and duplicate suggestions without automatic merging.
 - AI recommendations from saved recipes and the web, with learned preferences the owner can inspect and correct.
-- Lose It! Premium on iPhone; recipe transfer is a high-value feature subject to verified support.
+- Lose It! Premium on iPhone. Updated 2026-11-04: Lose It! imports recipes from the public recipe page, so no in-app Lose It! feature is built.
 - Functionality comes first, with a rich, distinctive interface.
 - Cloudflare free plan at cookbook.chrisandelissa.com, using Cloudflare D1 for the database. Otherwise minimize Cloudflare-specific dependencies.
 - Search engines must not index the site.

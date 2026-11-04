@@ -17,10 +17,10 @@ Milestones are implemented one at a time. Each milestone starts only when the ow
 | D7 | Backups are **manual**: a "Download full backup" button and a matching restore tool. No scheduled backups. D1 Time Travel (7 days on the free plan) is an additional safety net. |
 | D8 | Duplicate detection: **free text similarity on every add/import**, plus an explicit "Check with AI" button. |
 | D9 | Preferences refresh **on request** (button) and **apply immediately**; the owner can view and correct them at any time. They only influence the "Ask AI for suggestions" feature. |
-| D10 | **No search-engine indexing** (noindex + robots.txt). Pages still include schema.org Recipe markup for Lose It! URL import testing. |
+| D10 | **No search-engine indexing** (noindex + robots.txt). Pages still include schema.org Recipe markup, which Lose It! uses to import recipes from their web page. |
 | D11 | Test on **iPhone Safari, Chrome on iPhone, Home Screen web app, and Android**. |
 | D12 | Old-chat import is **one recipe at a time**. No bulk or chat-export import. |
-| D13 | Lose It!: copy/paste is acceptable **only if the whole ingredient list transfers in one paste**. Gate: the owner tests the Lose It! Text Importer with a multi-line sample before M6. If it accepts only one ingredient at a time, the feature is dropped. |
+| D13 | Lose It!: **no in-app Lose It! feature.** Updated 2026-11-04: the owner confirmed Lose It! can import a recipe from its web page, so the owner points Lose It! at the public recipe page. The "Copy for Lose It!" feature is dropped. Keep the schema.org Recipe markup on recipe pages (D10). |
 | D14 | AI ingredient identification works on **new and existing** recipes. Suggestions never overwrite existing ingredients without review. |
 | D15 | Database is **Cloudflare D1** (owner choice), accessed only through an adapter. D1 is a documented Cloudflare dependency. |
 | D16 | Use the **Cloudflare Workers free plan**. If measured CPU time exceeds free-plan limits, moving to the paid plan is the owner's decision. **2026-11-03:** measured production CPU exceeds the 10 ms limit (medians 11–34 ms; see M0 status) with no failures observed; the owner chose to **stay on the free plan and watch for errors** (Cloudflare error 1102 / `exceededCpu`). Revisit if failures appear. |
@@ -277,13 +277,12 @@ Link fetching is SSRF-safe: http(s) only, standard ports, no private, local or c
 
 **Remaining for the owner:** set `ANTHROPIC_API_KEY` (production secret, plus `hosting/cloudflare/.dev.vars` locally), then run the live smoke test (`ANTHROPIC_API_KEY=... npm run smoke:ai`) and try one real paste, link and photo import on the site.
 
-### M6 — Cooking and Lose It!
+### M6 — Cooking
 
 - Serving adjustment (fractions, ranges, unscalable items flagged); cooking mode with Screen Wake Lock and an explanation when unsupported.
 - "Want to try", "made", and "favorite" markers.
-- "Copy for Lose It!" — only if the owner's Text Importer test (D13) passed.
 
-**Done when:** AC-054–056, 060 pass; Lose It! results from the owner's iPhone test documented (or the feature is recorded as dropped).
+**Done when:** AC-054–056, 060 pass.
 
 ### M7 — Recommendations and preferences
 
@@ -306,7 +305,3 @@ Link fetching is SSRF-safe: http(s) only, standard ports, no private, local or c
 - Cloudflare Workers, D1, R2: $0 within free-plan limits (R2 may need a payment method on file).
 - Claude API: usage-based, estimated cents per import, identification, or recommendation; confirmed in M8.
 - Domain renewal: separate, existing cost.
-
-## Pre-M6 owner task
-
-Run the Lose It! Text Importer test on iPhone: paste a multi-line ingredient list (for example, `2 cups jasmine rice`, `1 lb chicken thighs`, `1 tbsp fish sauce`) and note whether all lines become ingredients in one paste.

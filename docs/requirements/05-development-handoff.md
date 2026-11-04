@@ -50,7 +50,7 @@ Superseded by the milestones (M0–M8) in the [implementation plan](../implement
 
 ## Lose It! feasibility work
 
-Read [Lose It! integration](06-lose-it-integration.md). Validate a supported recipe-transfer path early. Start with the documented text-import workflow; investigate direct sending without promising unsupported capabilities. Include membership requirements and actual test results in the handoff.
+Resolved 2026-11-04: no Lose It! feature is built. The owner imports recipes into Lose It! from the public recipe page. Keep the schema.org Recipe markup on recipe pages so this keeps working. See [Lose It! integration](06-lose-it-integration.md).
 
 ## Expected implementation handoff
 

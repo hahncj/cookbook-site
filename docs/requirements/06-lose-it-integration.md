@@ -1,5 +1,7 @@
 # Lose It! recipe transfer
 
+> **Resolved 2026-11-04:** The owner confirmed that Lose It! can import a recipe from its web page. The owner will point Lose It! at the cookbook's public recipe pages. The "Copy ingredients for Lose It!" feature and the Text Importer test are dropped. The only remaining requirement: public recipe pages keep their schema.org Recipe markup. The sections below are kept as background.
+
 ## Owner requirement — Confirmed
 
 The owner tracks calories in Lose It! on an iPhone and has a Premium subscription. Moving saved recipes into Lose It! would be a high-value feature. Investigate direct sending or supported export/import workflows. Feasibility is conditional; do not promise automatic synchronization.

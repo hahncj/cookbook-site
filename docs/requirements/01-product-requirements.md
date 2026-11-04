@@ -60,9 +60,9 @@ Provide a central home with public browsing for recipes the owner creates so the
 - AI learns the owner's preferences from recipes already in the catalog.
 - The owner can view and correct inferred preferences.
 
-## Lose It! transfer — Confirmed interest, conditional feasibility
+## Lose It! transfer — Resolved 2026-11-04
 
-The owner uses Lose It! Premium on iPhone to track calories. Sending or exporting recipes into Lose It! is a high-value feature to investigate and implement where supported. See [integration requirements](06-lose-it-integration.md). Automatic sync and direct API access are not confirmed capabilities.
+The owner uses Lose It! Premium on iPhone to track calories. The owner confirmed that Lose It! can import a recipe from its web page, so no Lose It! feature is built in this app. The only requirement is that public recipe pages keep their schema.org Recipe markup. See [Lose It! integration](06-lose-it-integration.md).
 
 ## Planning constraints — Confirmed
 
