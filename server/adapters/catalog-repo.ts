@@ -118,6 +118,60 @@ export function createCatalogRepository(db: Database, newId: () => string): Cata
       .where(and(inArray(photos.id, list.map((p) => p.id)), isNull(photos.recipeId)));
 
   return {
+    async listDigestSources(limit) {
+      // Two queries with no bound id lists (D1 caps bound parameters per query).
+      const [rows, tagRows] = await Promise.all([
+        db
+          .select({
+            id: recipes.id,
+            kind: recipes.kind,
+            title: recipes.title,
+            description: recipes.description,
+            ingredients: recipes.ingredients,
+            prepTime: recipes.prepTime,
+            cookTime: recipes.cookTime,
+            sourceUrl: recipes.sourceUrl,
+          })
+          .from(recipes)
+          .where(isNull(recipes.deletedAt))
+          .orderBy(desc(recipes.updatedAt))
+          .limit(limit),
+        db
+          .select({ recipeId: recipeTags.recipeId, name: tags.name })
+          .from(recipeTags)
+          .innerJoin(tags, eq(tags.id, recipeTags.tagId))
+          .innerJoin(recipes, eq(recipes.id, recipeTags.recipeId))
+          .where(isNull(recipes.deletedAt))
+          .orderBy(asc(tags.name)),
+      ]);
+      const tagsById = new Map<string, string[]>();
+      for (const row of tagRows) tagsById.set(row.recipeId, [...(tagsById.get(row.recipeId) ?? []), row.name]);
+      return rows.map((row) => ({
+        id: row.id,
+        kind: row.kind,
+        title: row.title,
+        description: row.description,
+        tags: tagsById.get(row.id) ?? [],
+        ingredients: row.ingredients.map((i) => i.item).filter((item) => item.length > 0),
+        prepTime: row.prepTime,
+        cookTime: row.cookTime,
+        sourceUrl: row.sourceUrl,
+      }));
+    },
+
+    async titles(ids) {
+      const found = new Map<string, string>();
+      // Chunked: D1 allows at most 100 bound parameters per query.
+      for (let i = 0; i < ids.length; i += 90) {
+        const rows = await db
+          .select({ id: recipes.id, title: recipes.title })
+          .from(recipes)
+          .where(and(inArray(recipes.id, ids.slice(i, i + 90)), isNull(recipes.deletedAt)));
+        for (const row of rows) found.set(row.id, row.title);
+      }
+      return found;
+    },
+
     async list(query: ListQuery) {
       const conditions: SQL[] = [isNull(recipes.deletedAt)];
       if (query.kind) conditions.push(eq(recipes.kind, query.kind));

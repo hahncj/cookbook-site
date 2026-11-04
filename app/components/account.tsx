@@ -70,7 +70,7 @@ export function Avatar({ viewer, size = 32 }: { viewer: Viewer; size?: number })
 
 /**
  * E2: profile picture (and name on wider screens) opening a small menu.
- * For admins the menu also holds Review and Import, and a dot on the picture
+ * For admins the menu also holds Review, Import, Ask AI and Preferences (M7), and a dot on the picture
  * shows waiting reviews. Add is the floating button.
  */
 export function AccountMenu({ viewer, pendingReviews = 0 }: { viewer: Viewer; pendingReviews?: number }) {
@@ -145,6 +145,12 @@ export function AccountMenu({ viewer, pendingReviews = 0 }: { viewer: Viewer; pe
               </li>
               <li>
                 <Link to="/recipes/import">Import</Link>
+              </li>
+              <li>
+                <Link to="/ask">Ask AI</Link>
+              </li>
+              <li>
+                <Link to="/preferences">Preferences</Link>
               </li>
             </>
           )}

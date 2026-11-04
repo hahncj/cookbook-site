@@ -57,6 +57,13 @@
       "when": 1793816655073,
       "tag": "0007_markers",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1793821776577,
+      "tag": "0008_preferences",
+      "breakpoints": true
     }
   ]
 }

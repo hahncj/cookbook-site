@@ -4,7 +4,7 @@ import type { Database } from "./adapters/db";
 import type { MediaStore } from "./adapters/media";
 import { atomic } from "./adapters/atomic";
 import { cleanImage, IMAGE_CONTENT_TYPES, ImageError } from "./core/images";
-import { collections, photos, recipeCollections, recipeMade, recipeMarkers, recipeNotes, recipeRevisions, recipes, recipeTags, tags } from "./db/app-schema";
+import { collections, photos, preferenceRefreshes, preferences, recipeCollections, recipeMade, recipeMarkers, recipeNotes, recipeRevisions, recipes, recipeTags, tags } from "./db/app-schema";
 
 /**
  * Full backups (D7, AC-041/053/061). The browser downloads the data JSON and
@@ -28,6 +28,9 @@ export const TABLE_ORDER = [
   // Added in M6 (AC-061: feedback). Older backups simply have none.
   "recipe_markers",
   "recipe_made",
+  // Added in M7: the preference profile and its refresh log. Older backups have none.
+  "preferences",
+  "preference_refreshes",
 ] as const;
 export type BackupTable = (typeof TABLE_ORDER)[number];
 
@@ -42,6 +45,8 @@ const TABLES = {
   recipe_notes: recipeNotes,
   recipe_markers: recipeMarkers,
   recipe_made: recipeMade,
+  preferences,
+  preference_refreshes: preferenceRefreshes,
 } as const;
 
 const TIMESTAMP_KEYS = new Set(["createdAt", "updatedAt", "deletedAt", "favoriteAt", "wantToTryAt", "madeAt"]);
@@ -107,6 +112,19 @@ const ROW_SCHEMAS: Record<BackupTable, z.ZodType> = {
   recipe_notes: z.object({ id, recipeId: id, body: z.string().min(1).max(2_000), createdAt: ms, createdBy: nullableText(64) }),
   recipe_markers: z.object({ recipeId: id, favoriteAt: ms.nullable(), wantToTryAt: ms.nullable(), updatedAt: ms, updatedBy: nullableText(64) }),
   recipe_made: z.object({ id, recipeId: id, madeAt: ms, createdBy: nullableText(64) }),
+  preferences: z.object({
+    id,
+    statement: z.string().min(1).max(300),
+    inferredStatement: nullableText(300),
+    source: z.enum(["ai", "owner"]),
+    status: z.enum(["suggested", "confirmed", "rejected"]),
+    evidence: z.array(id).max(50),
+    confidence: z.enum(["high", "medium", "low"]).nullable(),
+    createdAt: ms,
+    updatedAt: ms,
+    updatedBy: nullableText(64),
+  }),
+  preference_refreshes: z.object({ id, recipeCount: z.number().int().nonnegative(), note: nullableText(2_000), createdAt: ms, createdBy: nullableText(64) }),
 };
 
 export interface BackupData {

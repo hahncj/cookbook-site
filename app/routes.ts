@@ -12,6 +12,8 @@ export default [
   route("backup", "routes/backup.tsx"),
   route("review", "routes/review.tsx"),
   route("settings", "routes/settings.tsx"),
+  route("ask", "routes/ask.tsx"),
+  route("preferences", "routes/preferences.tsx"),
   route("api/photos", "routes/api.photos.ts"),
   route("api/photos/find", "routes/api.photos.find.ts"),
   route("api/photos/fetch", "routes/api.photos.fetch.ts"),

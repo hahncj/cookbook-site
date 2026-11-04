@@ -31,7 +31,13 @@ export function meta() {
 export async function loader({ request, context }: Route.LoaderArgs) {
   const services = context.get(servicesContext);
   await requireAdminPage(request, services);
-  return { collections: await services.catalog.listCollections(), aiEnabled: services.ai.configured };
+  // "Save to cookbook" on an Ask AI web discovery (M7) opens here with the link filled in.
+  const prefill = new URL(request.url).searchParams.get("url") ?? "";
+  return {
+    collections: await services.catalog.listCollections(),
+    aiEnabled: services.ai.configured,
+    prefillUrl: /^https?:\/\//i.test(prefill) ? prefill.slice(0, 2_000) : "",
+  };
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -80,7 +86,7 @@ export default function ImportRecipe({ loaderData, actionData }: Route.Component
   const navigation = useNavigation();
   const submit = useSubmit();
   const working = navigation.state === "submitting" && ["paste", "link", "photo"].includes(String(navigation.formData?.get("intent")));
-  const [tab, setTab] = useState<Tab>(result?.stage === "input" ? result.tab : "paste");
+  const [tab, setTab] = useState<Tab>(result?.stage === "input" ? result.tab : loaderData.prefillUrl ? "link" : "paste");
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [preparing, setPreparing] = useState(false);
 
@@ -204,7 +210,7 @@ export default function ImportRecipe({ loaderData, actionData }: Route.Component
         <Form method="post" className="import-panel">
           <div className="field">
             <label htmlFor="import-url">Web address</label>
-            <input id="import-url" name="url" type="url" inputMode="url" placeholder="https://" defaultValue={failed?.url ?? ""} required />
+            <input id="import-url" name="url" type="url" inputMode="url" placeholder="https://" defaultValue={failed?.url ?? loaderData.prefillUrl} required />
           </div>
           <button type="submit" name="intent" value="link" className="btn btn-primary" disabled={working}>
             {busyLabel("Read page")}

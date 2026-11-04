@@ -4,6 +4,7 @@ import type { Change, Revision, RevisionInfo, RevisionOrigin } from "./history";
 import { diffSnapshots, snapshotOfEntry, snapshotToInput } from "./history";
 import type { Entry, EntryInput, EntryKind, EntryOrigin, EntrySummary, NamedRef } from "./recipes";
 import { buildSearchQuery } from "./recipes";
+import type { DigestSource } from "./preferences";
 import { anyKeywordQuery, findDuplicates, type DuplicateCandidate, type DuplicateInput, type DuplicateMatch } from "./duplicates";
 
 export interface ListQuery {
@@ -39,6 +40,10 @@ export interface ExperimentNote {
 }
 
 export interface CatalogRepository {
+  /** Active entries, newest first, as material for preferences and recommendations (M7). */
+  listDigestSources(limit: number): Promise<DigestSource[]>;
+  /** Titles of the given active entries (missing or deleted ids are left out). */
+  titles(ids: string[]): Promise<Map<string, string>>;
   list(query: ListQuery): Promise<{ items: EntrySummary[]; total: number }>;
   get(id: string, options?: { includeDeleted?: boolean }): Promise<Entry | null>;
   /** Creates the entry and its first version. */
@@ -65,6 +70,8 @@ export interface CatalogDeps {
 }
 
 export const PAGE_SIZE = 50;
+/** Entries read for preferences and recommendations; buildDigests then picks the most relevant. */
+export const DIGEST_SOURCE_LIMIT = 1_000;
 export const NOTE_MAX = 2_000;
 
 export interface BrowseParams {
@@ -178,6 +185,9 @@ export function createCatalog({ repo, now, newId }: CatalogDeps) {
     remove: (id: string, actor: Actor) => repo.setDeleted(id, true, { now: now(), actor }),
     restore: (id: string, actor: Actor) => repo.setDeleted(id, false, { now: now(), actor }),
     listDeleted: () => repo.listDeleted(),
+    /** Material for preferences and recommendations (M7). */
+    digestSources: () => repo.listDigestSources(DIGEST_SOURCE_LIMIT),
+    titles: (ids: string[]) => repo.titles([...new Set(ids)]),
     listTags: () => repo.listTags(),
     listCollections: () => repo.listCollections(),
 
