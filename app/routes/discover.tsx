@@ -1,4 +1,5 @@
-import { Form, Link, data, useNavigation } from "react-router";
+import { useEffect, useState } from "react";
+import { Form, Link, data, useFetcher, useNavigation } from "react-router";
 import { requireAdminPage, requireAdminWrite } from "../admin.server";
 import { servicesContext } from "../context";
 import { AI_NOT_CONFIGURED } from "../../server/core/ai";
@@ -30,7 +31,13 @@ export async function action({ request, context }: Route.ActionArgs) {
   const asked = String(form.get("q") ?? "");
   const source = form.get("source") === "web" ? "web" : "write";
   if (!services.ai.configured) return data<DiscoverData>({ ok: false, error: AI_NOT_CONFIGURED, request: asked }, { status: 503 });
-  const outcome = await services.discovery.discover({ request: asked, source });
+  let exclude: unknown = [];
+  try {
+    exclude = JSON.parse(String(form.get("exclude") ?? "[]"));
+  } catch {
+    exclude = [];
+  }
+  const outcome = await services.discovery.discover({ request: asked, source, exclude });
   if (!outcome.ok) return data<DiscoverData>({ ok: false, error: outcome.message, request: asked }, { status: outcome.reason === "invalid" ? 422 : 502 });
   return data<DiscoverData>({ ok: true, result: outcome.value });
 }
@@ -65,8 +72,8 @@ export default function Discover({ loaderData, actionData }: Route.ComponentProp
       )}
       {!answer && !finding && (
         <p className="lede">
-          In the search bar, choose <strong>AI</strong> for recipes Claude writes for you (quick), or <strong>Web</strong> for real recipes with sources
-          (slower), then describe what you'd like to cook. Your <Link to="/preferences">preferences</Link> are used unless you add “ignore my
+          In the search bar, choose <strong>AI</strong> for recipes Claude writes for you, or <strong>Web</strong> for real recipes with sources, then
+          describe what you'd like to cook. Your <Link to="/preferences">preferences</Link> are used unless you add “ignore my
           preferences” to the request. It won't repeat recipes you already have. Nothing is saved unless you save it.
         </p>
       )}
@@ -82,20 +89,46 @@ export default function Discover({ loaderData, actionData }: Route.ComponentProp
 }
 
 function Results({ result }: { result: Discoveries }) {
-  const nothing = result.web.length === 0 && result.written.length === 0;
+  // "More results" / "More ideas" add to the list below; a new search starts over.
+  const more = useFetcher<DiscoverData>();
+  const [web, setWeb] = useState(result.web);
+  const [written, setWritten] = useState(result.written);
+  const [dropped, setDropped] = useState(result.droppedUnverified);
+  const [moreNote, setMoreNote] = useState<string | null>(null);
+  useEffect(() => {
+    setWeb(result.web);
+    setWritten(result.written);
+    setDropped(result.droppedUnverified);
+    setMoreNote(null);
+  }, [result]);
+  useEffect(() => {
+    const answer = more.data;
+    if (!answer || more.state !== "idle") return;
+    if (!answer.ok) return setMoreNote(answer.error);
+    const added = answer.result;
+    setWeb((list) => [...list, ...added.web.filter((w) => !list.some((x) => x.url === w.url))]);
+    setWritten((list) => [...list, ...added.written.filter((r) => !list.some((x) => x.title === r.title))]);
+    setDropped((n) => n + added.droppedUnverified);
+    setMoreNote(added.web.length + added.written.length === 0 ? "No more new results. Try asking a different way." : null);
+  }, [more.data, more.state]);
+
+  const isWeb = result.source === "web";
+  const shown = isWeb ? web.map((w) => w.url) : written.map((r) => r.title);
+  const nothing = web.length === 0 && written.length === 0;
+  const loadingMore = more.state !== "idle";
   return (
     <section className="discover-results" aria-labelledby="discover-results-title">
       <h2 id="discover-results-title" className="section-title">
         New recipes for “{result.request}”
       </h2>
       <p className="muted">
-        {result.source === "web" ? "Found on the web" : "Written by AI"} ·{" "}
+        {isWeb ? "Found on the web" : "Written by AI"} ·{" "}
         {result.usedPreferences ? "your preferences were used (add “ignore my preferences” to leave them out)" : "preferences not used"}
       </p>
       {result.note && <p className="notice">{result.note}</p>}
-      {nothing && <p className="empty">Nothing fit this time. Try asking a different way.</p>}
+      {nothing && <p className="empty">Nothing fit this time. Try “More” or ask a different way.</p>}
       <ol className="suggestions">
-        {result.web.map((w) => (
+        {web.map((w) => (
           <li key={w.url} className="suggestion card">
             <span className="suggestion-label suggestion-web">From the web</span>
             <h3 className="suggestion-title">
@@ -107,7 +140,7 @@ function Results({ result }: { result: Discoveries }) {
             {w.reason && <p>{w.reason}</p>}
             <p className="suggestion-source muted">
               Source: {w.sourceName}
-              {w.sourceName !== hostOf(w.url) && ` (${hostOf(w.url)})`} · {w.pageRead ? "Page read by AI" : "Seen in search results only"}
+              {w.sourceName !== hostOf(w.url) && ` (${hostOf(w.url)})`}
             </p>
             <div>
               {w.savedRecipeId ? (
@@ -122,13 +155,26 @@ function Results({ result }: { result: Discoveries }) {
             </div>
           </li>
         ))}
-        {result.written.map((r) => (
+        {written.map((r) => (
           <WrittenCard key={r.title} recipe={r} />
         ))}
       </ol>
-      {result.droppedUnverified > 0 && (
+      <more.Form method="post" action="/discover" className="discover-more">
+        <input type="hidden" name="q" value={result.request} />
+        <input type="hidden" name="source" value={result.source} />
+        <input type="hidden" name="exclude" value={JSON.stringify(shown)} />
+        <button type="submit" className="btn" disabled={loadingMore}>
+          {loadingMore ? "Finding more…" : isWeb ? "More results" : "More ideas"}
+        </button>
+        {moreNote && (
+          <p className="muted" role="status">
+            {moreNote}
+          </p>
+        )}
+      </more.Form>
+      {dropped > 0 && (
         <p className="muted">
-          {result.droppedUnverified} web suggestion{result.droppedUnverified === 1 ? " was" : "s were"} left out because the link couldn't be confirmed.
+          {dropped} web suggestion{dropped === 1 ? " was" : "s were"} left out because the link couldn't be confirmed.
         </p>
       )}
       <p className="muted">“Save to cookbook” opens the recipe in the editor so you can check it. Nothing is saved until you press Save.</p>

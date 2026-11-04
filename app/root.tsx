@@ -200,7 +200,7 @@ function HeaderSearch({ query, isAdmin }: { query: string; isAdmin: boolean }) {
       </Form>
       {finding && (
         <p className="ai-finding" role="status">
-          {findingWeb ? "Searching the web for new recipes. This can take up to a minute." : "Writing new recipes with AI. This takes about 20 seconds."}
+          {findingWeb ? "Searching the web for new recipes. This usually takes 15–30 seconds." : "Writing new recipes with AI. This takes about 20 seconds."}
         </p>
       )}
     </div>

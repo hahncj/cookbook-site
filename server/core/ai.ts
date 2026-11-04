@@ -66,6 +66,8 @@ export interface DiscoverInput {
   favorites: string[];
   /** Every saved title, so results are new rather than repeats. */
   cookbookTitles: string[];
+  /** Results already shown for this request ("More"): web addresses, or titles of written recipes. */
+  exclude: string[];
   /** ISO date. */
   today: string;
 }

@@ -2055,6 +2055,15 @@ figcaption {
   background: var(--accent);
   color: var(--on-accent);
 }
+.discover-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.discover-more p {
+  margin: 0;
+}
 .ai-finding {
   margin: 6px 0 0;
   font-size: 14px;

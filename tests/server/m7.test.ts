@@ -349,6 +349,34 @@ describe("AI mode finds new recipes (AC-015, AC-034, D19)", () => {
     ]);
   });
 
+  it("'More' leaves out what was already shown and tells the AI about it", async () => {
+    await createRecipe("Noodles");
+    ai.discovery = {
+      ok: true,
+      value: {
+        web: [
+          { title: "Shown", url: "https://recipes.example.org/shown/", sourceName: "Ex", reason: "Again." },
+          { title: "New", url: "https://recipes.example.org/new", sourceName: "Ex", reason: "Fresh." },
+        ],
+        written: [],
+        note: null,
+        webSources: [
+          { url: "https://recipes.example.org/shown", title: "Shown", read: false },
+          { url: "https://recipes.example.org/new", title: "New", read: false },
+        ],
+      },
+    };
+    const exclude = JSON.stringify(["https://recipes.example.org/shown", 42, "x".repeat(3000)]);
+    const response = await run(discoverAction(args(post("/discover", { q: "stew", source: "web", exclude }, admin))));
+    expect(response.body.result.web.map((w: { title: string }) => w.title)).toEqual(["New"]);
+    expect(discoverInput().exclude).toEqual(["https://recipes.example.org/shown", "x".repeat(2000)]);
+
+    ai.discovery = { ok: true, value: { web: [], written: [{ title: "Leek Toast", description: "", servings: "", prepTime: "", cookTime: "", ingredients: [{ quantity: "1", item: "leek" }], steps: ["Cook."], notes: "", reason: "" }], note: null, webSources: [] } };
+    const again = await run(discoverAction(args(post("/discover", { q: "leeks", exclude: JSON.stringify(["leek toast"]) }, admin))));
+    expect(again.body.result.written).toEqual([]);
+    expect((await run(discoverAction(args(post("/discover", { q: "leeks", exclude: "{bad" }, admin))))).status).toBe(200);
+  });
+
   it("explains an empty or long request and AI errors, keeping the request", async () => {
     let response = await run(discoverAction(args(post("/discover", { q: "  " }, admin))));
     expect(response.status).toBe(422);
@@ -449,6 +477,7 @@ describe("Claude adapter for AI mode", () => {
     rejected: ["Hates rice"],
     favorites: ["Gochujang Noodles"],
     cookbookTitles: ["Gochujang Noodles", "Bean Chili"],
+    exclude: ["https://shown.example/before"],
     today: "2026-11-04",
   };
   const submit = {
@@ -478,12 +507,16 @@ describe("Claude adapter for AI mode", () => {
     });
     expect(requests).toHaveLength(2);
     expect(requests[0]!.model).toBe("claude-opus-5-5");
-    expect(requests[0]!.tools!.map((t) => (t as { type?: string; name?: string }).type ?? (t as { name?: string }).name)).toEqual(["web_search_20260209", "web_fetch_20260209", "submit_suggestions"]);
-    expect(requests[0]!.tools!.slice(0, 2).map((t) => (t as { max_uses?: number }).max_uses)).toEqual([6, 4]);
+    expect(requests[0]!.tools!.map((t) => (t as { type?: string; name?: string }).type ?? (t as { name?: string }).name)).toEqual(["web_search_20260209", "submit_suggestions"]);
+    // Search only, at most 3 searches, light thinking: faster and cheaper.
+    expect((requests[0]!.tools![0] as { max_uses?: number }).max_uses).toBe(3);
+    expect(requests[0]!.output_config).toMatchObject({ effort: "low" });
     expect(requests[1]!.messages).toHaveLength(2); // the paused turn sent back, no extra user message
     const prompt = JSON.stringify(requests[0]!.messages);
     expect(prompt).toContain("Likes noodles (confirmed by the owner)");
     expect(prompt).toContain("Hates rice");
+    expect(prompt).toContain("Already shown for this request (suggest different pages)");
+    expect(prompt).toContain("https://shown.example/before");
     expect(prompt).toContain("Gochujang Noodles");
   });
 
@@ -515,7 +548,7 @@ describe("Claude adapter for AI mode", () => {
         },
       },
     } as unknown as Anthropic;
-    const result = await createAnthropicAi({ apiKey: "k", client }).discover({ ...input, source: "write", preferences: null, rejected: [], favorites: [] });
+    const result = await createAnthropicAi({ apiKey: "k", client }).discover({ ...input, source: "write", preferences: null, rejected: [], favorites: [], exclude: [] });
     expect(result).toEqual({
       ok: true,
       value: {
