@@ -13,6 +13,9 @@ import { createCatalogRepository } from "./adapters/catalog-repo";
 import { createCatalog, type Catalog } from "./core/catalog";
 import { createMarkersRepository } from "./adapters/markers-repo";
 import { createMarkers, type Markers } from "./core/markers";
+import { createPreferencesRepository } from "./adapters/preferences-repo";
+import { createPreferences, type Preferences } from "./core/preferences";
+import { createRecommender, type Recommender } from "./core/recommendations";
 import { isAdminEmail } from "./core/admin";
 import { servePhoto } from "./photos";
 import { notConfigured, type RecipeAi } from "./core/ai";
@@ -34,6 +37,10 @@ export interface Services {
   submissions: Submissions;
   /** In-app AI (admin-only). A stub that reports "not set up" when there's no key. */
   ai: RecipeAi;
+  /** Preference profile (M7). Public to read (D3); refresh and corrections are admin-only. */
+  preferences: Preferences;
+  /** "Ask AI" suggestions (M7). Admin-only callers. */
+  recommender: Recommender;
   /** Fetches web pages for link import, with SSRF protection. */
   fetchPage: PageFetcher;
   /** Find a photo (E1): source page, stock, then web. Admin-only callers. */
@@ -62,6 +69,25 @@ export function createServices(deps: HostDeps): Services {
   const catalog = createCatalog({ repo: createCatalogRepository(deps.db, newId), now, newId });
   const fetchPage = deps.fetchPage ?? createPageFetcher();
   const { pixabay, brave } = deps.config.photoSearch;
+  const ai =
+    deps.ai ??
+    (deps.config.anthropic
+      ? createAnthropicAi({
+          apiKey: deps.config.anthropic.apiKey,
+          model: deps.config.anthropic.model ?? undefined,
+          baseUrl: deps.config.anthropic.baseUrl ?? undefined,
+        })
+      : notConfigured);
+  const markersRepo = createMarkersRepository(deps.db);
+  const signals = () => markersRepo.listSignals();
+  const preferences = createPreferences({
+    repo: createPreferencesRepository(deps.db),
+    ai,
+    digestSources: () => catalog.digestSources(),
+    signals,
+    now,
+    newId,
+  });
   return {
     config: deps.config,
     db: deps.db,
@@ -69,21 +95,21 @@ export function createServices(deps: HostDeps): Services {
     auth: createAuth({ config: deps.config, db: deps.db, fetchClientMetadata: deps.fetchClientMetadata }),
     catalog,
     markers: createMarkers({
-      repo: createMarkersRepository(deps.db),
+      repo: markersRepo,
       recipeExists: async (id) => (await catalog.get(id)) !== null,
       now,
       newId,
     }),
     submissions: createSubmissions({ repo: createSubmissionsRepository(deps.db), catalog, now, newId }),
-    ai:
-      deps.ai ??
-      (deps.config.anthropic
-        ? createAnthropicAi({
-            apiKey: deps.config.anthropic.apiKey,
-            model: deps.config.anthropic.model ?? undefined,
-            baseUrl: deps.config.anthropic.baseUrl ?? undefined,
-          })
-        : notConfigured),
+    ai,
+    preferences,
+    recommender: createRecommender({
+      ai,
+      digestSources: () => catalog.digestSources(),
+      signals,
+      profile: () => preferences.forRecommendations(),
+      now,
+    }),
     fetchPage,
     photoFinder: createPhotoFinder({
       fetchPage,

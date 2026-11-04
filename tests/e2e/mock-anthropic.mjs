@@ -6,6 +6,97 @@ import { createServer } from "node:http";
 
 const port = Number(process.env.MOCK_ANTHROPIC_PORT ?? 3102);
 
+function userText(body) {
+  const first = body.messages?.[0]?.content;
+  return Array.isArray(first) ? first.map((b) => b.text ?? "").join("\n") : String(first ?? "");
+}
+
+function between(text, open, close) {
+  const start = text.indexOf(open);
+  if (start < 0) return "";
+  const end = text.indexOf(close, start + open.length);
+  return text.slice(start + open.length, end < 0 ? undefined : end).trim();
+}
+
+/** M7 preference profile: two real patterns, plus one the app must drop (no medical inferences). */
+function profile(body) {
+  const cookbook = JSON.parse(between(userText(body), "<cookbook>", "</cookbook>") || "[]");
+  const korean = cookbook.find((r) => /gochujang|noodle/i.test(JSON.stringify(r))) ?? cookbook[0];
+  const hearty = cookbook.find((r) => /chili|stew|bean/i.test(JSON.stringify(r))) ?? cookbook[1] ?? cookbook[0];
+  return {
+    preferences: [
+      { statement: "Likes spicy Korean flavors such as gochujang", confidence: "medium", evidence: korean ? [korean.id] : [] },
+      { statement: "Enjoys hearty one-pot meals", confidence: "low", evidence: hearty ? [hearty.id] : [] },
+      { statement: "Has a peanut allergy", confidence: "low", evidence: korean ? [korean.id] : [] },
+      { statement: "Loves invented dishes", confidence: "low", evidence: ["no-such-recipe"] },
+    ],
+    note: "A small sample, so these are guesses.",
+  };
+}
+
+/**
+ * M7 recommendations. With web tools it pauses once (pause_turn) to exercise
+ * the resume loop, returns search and fetch results, and then submits one
+ * real web page plus one made-up link the app must drop (AC-034).
+ */
+function recommend(body) {
+  const text = userText(body);
+  const cookbook = JSON.parse(between(text, "<cookbook>", "</cookbook>") || "[]");
+  const request = between(text, "<request>", "</request>");
+  const confirmed = between(text, "Preference profile:", "\n\n")
+    .split("\n")
+    .filter((line) => line.includes("(confirmed by the owner)"))
+    .map((line) => line.replace(/^- /, "").replace(" (confirmed by the owner)", ""));
+  const words = request.toLowerCase().split(/\W+/).filter((w) => w.length > 3);
+  const score = (r) => (words.some((w) => r.title.toLowerCase().includes(w)) ? 10 : 0) + (r.feedback?.favorite ? 2 : 0) + (r.feedback?.wantToTry ? 1 : 0);
+  const ranked = [...cookbook].sort((a, b) => score(b) - score(a)).slice(0, 2);
+  const why = (r) =>
+    [`Fits “${request}”.`, r.feedback?.favorite ? "It's a favorite." : "", confirmed[0] ? `Matches your preference: ${confirmed[0]}.` : ""].filter(Boolean).join(" ");
+  const web = (body.tools ?? []).some((t) => t.name === "web_search");
+  const submit = {
+    type: "tool_use",
+    id: "toolu_submit",
+    name: "submit_suggestions",
+    input: {
+      saved: [...ranked.map((r) => ({ recipe_id: r.id, reason: why(r) })), { recipe_id: "made-up-id", reason: "Not a real recipe." }],
+      web: web
+        ? [
+            { title: "Miso Glazed Eggplant", url: "https://recipes.e2e.test/miso-eggplant", source_name: "E2E Recipes", reason: "Something new with similar flavors." },
+            { title: "Imaginary Pie", url: "https://invented.e2e.test/pie", source_name: "Nowhere", reason: "Made up." },
+          ]
+        : [],
+      note: "",
+    },
+  };
+  if (!web) return { content: [submit], stop_reason: "tool_use" };
+  const searched = [
+    { type: "server_tool_use", id: "srvtoolu_1", name: "web_search", input: { query: request } },
+    {
+      type: "web_search_tool_result",
+      tool_use_id: "srvtoolu_1",
+      content: [
+        { type: "web_search_result", url: "https://recipes.e2e.test/miso-eggplant", title: "Miso Glazed Eggplant", encrypted_content: "x", page_age: null },
+        { type: "web_search_result", url: "https://recipes.e2e.test/other", title: "Other", encrypted_content: "x", page_age: null },
+      ],
+    },
+  ];
+  if ((body.messages ?? []).length === 1) return { content: searched, stop_reason: "pause_turn" };
+  const fetched = [
+    { type: "server_tool_use", id: "srvtoolu_2", name: "web_fetch", input: { url: "https://recipes.e2e.test/miso-eggplant" } },
+    {
+      type: "web_fetch_tool_result",
+      tool_use_id: "srvtoolu_2",
+      content: {
+        type: "web_fetch_result",
+        url: "https://recipes.e2e.test/miso-eggplant",
+        content: { type: "document", source: { type: "text", media_type: "text/plain", data: "Miso eggplant recipe" }, title: "Miso Glazed Eggplant" },
+        retrieved_at: "2026-11-04T00:00:00Z",
+      },
+    },
+  ];
+  return { content: [...fetched, { type: "text", text: "Here are my picks." }, submit], stop_reason: "tool_use" };
+}
+
 function answer(body) {
   const system = String(body.system ?? "");
   const text = JSON.stringify(body.messages ?? []);
@@ -32,6 +123,7 @@ function answer(body) {
       otherRecipes: text.includes("SECOND RECIPE") ? 1 : 0,
     };
   }
+  if (system.includes("study a family cookbook")) return profile(body);
   if (system.includes("list the ingredients")) {
     return {
       suggestions: [
@@ -92,6 +184,22 @@ createServer((req, res) => {
   req.on("end", () => {
     const body = JSON.parse(raw || "{}");
     res.setHeader("content-type", "application/json");
+    const system = String(body.system ?? "");
+    const special = system.includes("decide what to cook") ? recommend(body) : null;
+    if (special) {
+      return res.end(
+        JSON.stringify({
+          id: `msg_mock_${Date.now()}`,
+          type: "message",
+          role: "assistant",
+          model: body.model,
+          content: special.content,
+          stop_reason: special.stop_reason,
+          stop_sequence: null,
+          usage: { input_tokens: 10, output_tokens: 10 },
+        }),
+      );
+    }
     res.end(
       JSON.stringify({
         id: `msg_mock_${Date.now()}`,

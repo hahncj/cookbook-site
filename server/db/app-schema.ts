@@ -224,3 +224,39 @@ export const toolRevocations = sqliteTable("tool_revocations", {
   revokedAt: integer("revoked_at", { mode: "timestamp_ms" }).notNull(),
   revokedBy: text("revoked_by"),
 });
+
+/**
+ * The preference profile (M7, workflow 6). Public to read (D3); only admins
+ * change it. AI-inferred items start as "suggested". The owner can confirm,
+ * correct (edit), or reject them, and can add their own. A refresh replaces
+ * only unreviewed suggestions: confirmed, owner-written and rejected items are
+ * kept, and `inferredStatement` keeps the AI's original wording so an edited
+ * or rejected inference is not suggested again (AC-017, AC-035).
+ */
+export const preferences = sqliteTable(
+  "preferences",
+  {
+    id: text("id").primaryKey(),
+    statement: text("statement").notNull(),
+    /** The AI's original wording (null for owner-written items). */
+    inferredStatement: text("inferred_statement"),
+    source: text("source", { enum: ["ai", "owner"] }).notNull(),
+    status: text("status", { enum: ["suggested", "confirmed", "rejected"] }).notNull(),
+    /** Recipe ids that support an inference. */
+    evidence: text("evidence", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
+    confidence: text("confidence", { enum: ["high", "medium", "low"] }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+    updatedBy: text("updated_by"),
+  },
+  (t) => [index("preferences_status_idx").on(t.status, t.createdAt)],
+);
+
+/** One row per profile refresh the owner asked for (M7): when, by whom, and the AI's caveats. */
+export const preferenceRefreshes = sqliteTable("preference_refreshes", {
+  id: text("id").primaryKey(),
+  recipeCount: integer("recipe_count").notNull(),
+  note: text("note"),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  createdBy: text("created_by"),
+});

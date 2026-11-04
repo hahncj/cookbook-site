@@ -302,12 +302,38 @@ Also verified: the Cloudflare build compiles, and all migrations through 0007 ap
 
 Production after merge: `npm run deploy:ci` applies migration 0007. Then check it with the read-only command in AGENTS.md (it should say "No migrations to apply").
 
+**Real device (2026-11-04):** the owner tested M6 successfully on a real iPhone.
+
 ### M7 — Recommendations and preferences
 
 - "Ask AI" with ranked saved recipes and web discoveries (Claude web search/fetch), labeled with sources and short reasons.
 - Preference profile with evidence, on-request refresh, corrections that persist across refreshes.
 
 **Done when:** AC-015–017, 034, 035 pass.
+
+#### M7 status (2026-11-04, branch `feature/m7-recommendations`)
+
+Verified by automated tests (`npm run check`: 217 unit/integration tests; `npm run test:e2e`: 191 browser checks across phone (Chromium and WebKit), tablet and desktop). Server tests use a fake AI that records every call. Browser tests run the real Claude adapter against the local mock of the Messages API, including web search results, a fetched page and a paused turn.
+
+| Check | How it was verified |
+| --- | --- |
+| AC-015 | "Ask AI" (admin menu, `/ask`) returns ranked saved recipes and, when "Also look for new recipes on the web" is on, web discoveries found with Claude's web search and web fetch tools. Ranking uses the request, the preference profile and the M6 markers: Favorite and Want to try recipes are sent first and every recipe carries its favorite, want-to-try, made count and days since last made. Each suggestion has a one-sentence reason. Only real, active recipe ids are shown |
+| AC-034 | Each result is labeled "Saved recipe" or "Web discovery". A web discovery links to its source page (new tab), names the site, and says "Page read by AI" or "Seen in search results only". Its link must be one that the web tools actually returned in that request; made-up links are dropped and the page says how many. A web page already saved in the cookbook is shown as the saved recipe instead |
+| D2 | Nothing is saved from Ask AI. "Save to cookbook…" opens the link import with the address filled in; the owner reviews in the editor and presses Save |
+| AC-016 | "Refresh from my recipes" on Preferences (`/preferences`) asks Claude for patterns in the catalog and markers. Each suggestion lists the recipes behind it (links). Suggestions without real evidence, and any about allergies, intolerances or medical or dietary restrictions, are dropped. With fewer than 8 recipes the profile says it is a rough guess. The profile changes only when refreshed (D9) |
+| AC-017 | The owner can mark a suggestion right, correct its wording, reject it ("Not true"), delete their own, or add their own. Corrections are used by the next Ask AI request: confirmed and own items as firm preferences, unreviewed suggestions as hints, rejected ones as "not true" |
+| AC-035 | A refresh replaces only unreviewed suggestions. Rejected and corrected inferences are kept with the AI's original wording, sent to Claude as "don't suggest", and any new inference that says the same thing is dropped. "Allow again" forgets a rejection |
+| AC-066, AC-067 | Signed-out (401) and non-admin (403) requests to Ask AI and to every Preferences change are refused before any Claude call (the fake records zero calls). The Ask AI page sends visitors to sign in. The profile itself is public to read (D3) |
+| AC-036 | Without an API key both pages say AI isn't set up; nothing else changes |
+| AC-061 (preferences) | Backups include the new `preferences` and `preference_refreshes` tables (migration 0008) and restore them; older backups without them still restore |
+
+Proposed defaults (not owner decisions): web search is on by default for each request and limited to 4 searches and 3 page reads; at most 6–8 saved and 3–5 web suggestions; the request is temporary and the hint points to Preferences for anything permanent (instead of a "save as preference" button); the profile page shows rejected items under "Not true" (the profile is public, D3); recipes sent to Claude are capped at 300 (marked ones first, then newest), with ingredient names but no amounts, notes or photos.
+
+Expected cost per request (Claude Opus 5.5 at $4 / $20 per million input / output tokens, web search $10 per 1,000 searches): for a catalog of around 100 recipes (about 7,000 input tokens), a profile refresh or an Ask without the web is estimated at 5–10 cents, mostly output and thinking tokens. An Ask with the web is estimated at 20–50 cents: Claude re-reads the growing conversation after each search or page read, plus 1 cent per search. These are estimates, not measurements; confirm them against real usage in M8 (the Anthropic Console shows the cost per request).
+
+Also verified: the Cloudflare build compiles, and all migrations through 0008 apply in order to a local D1 database. Not verified: a real Claude request with web search (the live smoke test costs money and was not run).
+
+Production after merge: `npm run deploy:ci` applies migration 0008. Then check it from an up-to-date `main` with the read-only command in AGENTS.md.
 
 ### M8 — Verification and handoff
 
