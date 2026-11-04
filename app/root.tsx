@@ -16,7 +16,7 @@ import {
   useRouteLoaderData,
   useSearchParams,
 } from "react-router";
-import { AccountMenu, SettingsGear, SignInButton } from "./components/account";
+import { AccountMenu, FloatingAdd, SettingsGear, SignInButton } from "./components/account";
 import { PlusIcon, SearchIcon } from "./components/icons";
 import { servicesContext } from "./context";
 import { getViewer, type Viewer } from "./session.server";
@@ -119,7 +119,7 @@ function SiteHeader() {
             </div>
           )}
           {viewer ? (
-            <AccountMenu viewer={viewer} />
+            <AccountMenu viewer={viewer} pendingReviews={pendingReviews} />
           ) : (
             <>
               <SettingsGear />
@@ -133,15 +133,17 @@ function SiteHeader() {
 }
 
 export default function App() {
+  const { viewer } = useRootData();
   return (
     <>
       <a href="#main" className="skip-link">
         Skip to content
       </a>
       <SiteHeader />
-      <main id="main" className="container site-main">
+      <main id="main" className={viewer?.isAdmin ? "container site-main has-fab" : "container site-main"}>
         <Outlet />
       </main>
+      {viewer?.isAdmin && <FloatingAdd />}
     </>
   );
 }

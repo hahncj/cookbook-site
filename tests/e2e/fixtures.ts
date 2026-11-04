@@ -51,6 +51,18 @@ export async function jpegWithGps(page: Page): Promise<Buffer> {
   return Buffer.concat([jpeg.subarray(0, 2), app1, jpeg.subarray(2)]);
 }
 
+/** True for the phone projects, where Review and Import live in the account menu (E2). */
+export const isPhone = (page: Page) => (page.viewportSize()?.width ?? 1280) < 600;
+
+/**
+ * Follows an admin top-bar link (Review, Import). On phones those live in the
+ * account menu, so this opens it first.
+ */
+export async function clickAdminLink(page: Page, name: string | RegExp) {
+  if (isPhone(page)) await page.getByRole("banner").getByRole("button", { name: /^Account:/ }).click();
+  await page.getByRole("banner").getByRole("link", { name, exact: typeof name === "string" }).filter({ visible: true }).click();
+}
+
 /** AC-026: the page never scrolls sideways. */
 export async function expectNoHorizontalScroll(page: Page) {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

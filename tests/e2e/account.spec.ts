@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { expectAccessible, expectNoHorizontalScroll, fixtures, signInAsAdmin, signInAsViewer } from "./fixtures";
+import { expectAccessible, expectNoHorizontalScroll, fixtures, isPhone, signInAsAdmin, signInAsViewer } from "./fixtures";
 
 /** Both elements sit on the same row of the top bar (their boxes overlap vertically). */
 async function expectSameRow(a: Locator, b: Locator) {
@@ -56,7 +56,6 @@ test.describe("sign in from the top bar (E2)", () => {
     await expect(account.locator(".avatar-initial")).toHaveText("A");
     await expectSameRow(brand(page), account);
     await expect(header(page).getByRole("link", { name: "Sign in", exact: true })).toHaveCount(0);
-    await expect(header(page).getByRole("link", { name: "Add" })).toBeVisible();
     await expectNoHorizontalScroll(page);
 
     await account.click();
@@ -107,6 +106,63 @@ test.describe("sign in from the top bar (E2)", () => {
     await page.locator(".account-panel").getByRole("button", { name: "Sign out" }).click();
     await done;
     await expect(page).toHaveURL(/\/$/);
+  });
+});
+
+test.describe("admin actions by screen size (E2 phone top bar)", () => {
+  test("phones: logo and picture on one line, Add floats, Review and Import in the menu", async ({ page, context, request }) => {
+    test.skip(!isPhone(page), "Phone layout only.");
+    await signInAsAdmin(context);
+    // A waiting submission, so the dot and the count show.
+    await page.goto("/settings");
+    await page.getByLabel("New key name").fill(`Dot ${test.info().project.name}`);
+    await page.getByRole("button", { name: "Create key" }).click();
+    const key = (await page.locator(".notice code").textContent())!.trim();
+    const submitted = await request.post("/api/v1/recipes", {
+      headers: { Authorization: `Bearer ${key}`, "Idempotency-Key": `dot-${test.info().project.name}-${Date.now()}` },
+      data: { recipe: { title: `Waiting ${Date.now()}` } },
+    });
+    expect(submitted.status()).toBe(202);
+    await page.goto("/");
+    const account = header(page).getByRole("button", { name: /^Account: Admin/ });
+    await expectSameRow(brand(page), account);
+    const box = await header(page).boundingBox();
+    expect(box!.height, "top bar: logo row plus search row only").toBeLessThan(160);
+    for (const name of ["Review", "Import", "Add"]) {
+      await expect(header(page).getByRole("link", { name, exact: false }).filter({ visible: true })).toHaveCount(0);
+    }
+
+    await expect(account.locator(".account-dot")).toBeVisible();
+    const fab = page.getByRole("link", { name: "Add a recipe" });
+    await expect(fab).toBeVisible();
+    await expectNoHorizontalScroll(page);
+    await expectAccessible(page);
+
+    await account.click();
+    const menu = page.locator(".account-panel");
+    await expect(menu.getByRole("link", { name: /^Review, \d+ waiting$/ })).toBeVisible();
+    await expect(menu.getByRole("link", { name: "Import", exact: true })).toBeVisible();
+    await expectAccessible(page);
+    await menu.getByRole("link", { name: "Import", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Import a recipe" })).toBeVisible();
+    await expect(fab).toHaveCount(0); // never covers the editor
+
+    await page.goto("/");
+    await fab.click();
+    await expect(page).toHaveURL(/\/recipes\/new$/);
+    await expect(fab).toHaveCount(0);
+  });
+
+  test("wider screens keep Review, Import and Add in the top bar", async ({ page, context }) => {
+    test.skip(isPhone(page), "Tablet and desktop only.");
+    await signInAsAdmin(context);
+    await page.goto("/");
+    await expect(header(page).getByRole("link", { name: /^Review, \d+ waiting$/ })).toBeVisible();
+    await expect(header(page).getByRole("link", { name: "Import", exact: true })).toBeVisible();
+    await expect(header(page).getByRole("link", { name: "Add", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Add a recipe" })).toBeHidden();
+    await header(page).getByRole("button", { name: /^Account: Admin/ }).click();
+    await expect(page.locator(".account-panel").getByRole("link", { name: "Import" })).toBeHidden();
   });
 });
 

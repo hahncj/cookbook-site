@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
 import { authClient } from "../auth-client";
 import type { Viewer } from "../session.server";
-import { ChevronDownIcon, GearIcon } from "./icons";
+import { ChevronDownIcon, GearIcon, PlusIcon } from "./icons";
 
 /**
  * E2: goes straight to Google and comes back to this page. Before the page
@@ -68,8 +68,12 @@ export function Avatar({ viewer, size = 32 }: { viewer: Viewer; size?: number })
   );
 }
 
-/** E2: profile picture (and name on wider screens) opening a small menu. */
-export function AccountMenu({ viewer }: { viewer: Viewer }) {
+/**
+ * E2: profile picture (and name on wider screens) opening a small menu.
+ * On phones the menu also holds Review and Import, and a dot on the picture
+ * shows waiting reviews (the top-bar buttons are hidden there).
+ */
+export function AccountMenu({ viewer, pendingReviews = 0 }: { viewer: Viewer; pendingReviews?: number }) {
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const panelId = useId();
@@ -99,6 +103,7 @@ export function AccountMenu({ viewer }: { viewer: Viewer }) {
   }, [open]);
 
   const displayName = viewer.name || viewer.email;
+  const waiting = viewer.isAdmin && pendingReviews > 0;
   return (
     <div className="account" ref={root}>
       <button
@@ -107,10 +112,13 @@ export function AccountMenu({ viewer }: { viewer: Viewer }) {
         className="account-button"
         aria-expanded={open}
         aria-controls={panelId}
-        aria-label={`Account: ${displayName}`}
+        aria-label={`Account: ${displayName}${waiting ? `, ${pendingReviews} waiting for review` : ""}`}
         onClick={() => setOpen((value) => !value)}
       >
-        <Avatar viewer={viewer} />
+        <span className="avatar-wrap">
+          <Avatar viewer={viewer} />
+          {waiting && <span className="account-dot" aria-hidden="true" />}
+        </span>
         <span className="account-name" aria-hidden="true">
           {displayName}
         </span>
@@ -123,6 +131,23 @@ export function AccountMenu({ viewer }: { viewer: Viewer }) {
           {!viewer.isAdmin && <span className="muted">You can browse, but only cookbook admins can make changes.</span>}
         </div>
         <ul className="account-links">
+          {viewer.isAdmin && (
+            <>
+              <li className="phone-only">
+                <Link to="/review" aria-label={`Review, ${pendingReviews} waiting`}>
+                  Review
+                  {pendingReviews > 0 && (
+                    <span className="count-badge" aria-hidden="true">
+                      {pendingReviews}
+                    </span>
+                  )}
+                </Link>
+              </li>
+              <li className="phone-only">
+                <Link to="/recipes/import">Import</Link>
+              </li>
+            </>
+          )}
           <li>
             <Link to="/settings">Settings</Link>
           </li>
@@ -142,5 +167,19 @@ export function AccountMenu({ viewer }: { viewer: Viewer }) {
         </ul>
       </div>
     </div>
+  );
+}
+
+/** Pages where you are already adding or editing: no floating Add there. */
+const EDITOR_PATH = /^\/recipes\/(new|import|[^/]+\/edit)\/?$/;
+
+/** E2 (phones): Add as a round floating button at the bottom right. Hidden on wider screens by CSS. */
+export function FloatingAdd() {
+  const location = useLocation();
+  if (EDITOR_PATH.test(location.pathname)) return null;
+  return (
+    <Link to="/recipes/new" className="fab" aria-label="Add a recipe">
+      <PlusIcon />
+    </Link>
   );
 }

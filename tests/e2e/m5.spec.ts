@@ -1,13 +1,13 @@
 import { expect, test } from "@playwright/test";
 import { E2E } from "../../playwright.config";
-import { expectAccessible, expectNoHorizontalScroll, fixtures, jpegWithGps, signInAsAdmin } from "./fixtures";
+import { clickAdminLink, expectAccessible, expectNoHorizontalScroll, fixtures, jpegWithGps, signInAsAdmin } from "./fixtures";
 
 test.describe("In-app AI (M5)", () => {
   test("paste import: review, save, and find it later (AC-049)", async ({ page, context }) => {
     await signInAsAdmin(context);
     const title = `Pasted Biscuits ${test.info().project.name} ${Date.now()}`;
     await page.goto("/");
-    await page.getByRole("link", { name: "Import", exact: true }).click();
+    await clickAdminLink(page, "Import");
     await expect(page.getByRole("heading", { name: "Import a recipe" })).toBeVisible();
     await expectAccessible(page);
     await expectNoHorizontalScroll(page);

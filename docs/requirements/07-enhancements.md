@@ -52,6 +52,22 @@ Labels follow the rest of this package: **Confirmed** means the owner asked for 
 - Keep the `/sign-in` page. AI tools (ChatGPT, Claude.ai) send people there when they connect to the cookbook, so it is still needed for that flow. Rename its heading to **Sign in**.
 - If a non-admin signs in, keep the current message that they can browse but not edit.
 
+### Phone top bar — Confirmed 2026-11-04
+
+After using the first version, the owner found the phone top bar too cluttered: with the profile picture added, it wrapped onto two lines. Owner chose the "app style" layout:
+
+- On phones, the logo and the profile picture (or **Sign in**) stay on one line. Search stays on the line below.
+- **Add** moves to a round floating **+** button at the bottom right of the screen.
+- **Review** and **Import** move into the profile menu. Review shows how many items are waiting.
+- A small dot on the profile picture shows when reviews are waiting.
+- Wider screens (tablet and desktop) keep Review, Import and Add in the top bar, as now.
+
+### Phone top bar — Proposed details
+
+- "Phone" means screens narrower than 600px, the same point where the name next to the picture is hidden.
+- The floating **+** is hidden on pages where you are already adding or editing (new recipe, import, edit), so it never covers the editor's buttons.
+- The floating **+** clears the iPhone home bar, and pages get extra space at the bottom so it never hides the last item.
+
 ## E3. Move Appearance into Settings
 
 ### Owner request — Confirmed
@@ -85,6 +101,6 @@ Should Backup and Deleted recipes live in Settings for admins?
 | Item | Status | Notes |
 | --- | --- | --- |
 | E1 | In progress | Built separately. |
-| E2 | Built 2026-11-04, awaiting review | **Sign in** sits at the right of the top bar and goes straight to Google, returning to the same page. Signed in, the spot shows the Google picture (name too on screens 600px and wider, first letter if no picture) and opens a menu: name and email, Settings, Sign out. Better Auth already saves Google's picture as `user.image`; it is now refreshed on every sign-in (`overrideUserInfoOnSignIn`). `/sign-in` stays for AI tool connections, retitled **Sign in**. |
-| E3 | Built 2026-11-04, awaiting review | `/settings` is open to everyone. Visitors see Appearance only; admins also see the admin sections, whose actions still refuse signed-out (401) and non-admin (403) requests. Visitors reach it from a gear in the top bar. The footer is gone, since nothing was left in it. |
-| E4 | Built 2026-11-04, awaiting review | **Admin tools** section in Settings links to Backup and Deleted recipes. Both pages are unchanged. |
+| E2 | Merged 2026-11-04 (PR #15); phone top bar built 2026-11-04, awaiting review | **Sign in** sits at the right of the top bar and goes straight to Google, returning to the same page. Signed in, the spot shows the Google picture (name too on screens 600px and wider, first letter if no picture) and opens a menu: name and email, Settings, Sign out. Better Auth already saves Google's picture as `user.image`; it is now refreshed on every sign-in (`overrideUserInfoOnSignIn`). `/sign-in` stays for AI tool connections, retitled **Sign in**. Phone follow-up: below 600px, Add is a floating **+** button and Review / Import are in the profile menu, with a dot on the picture when reviews wait. |
+| E3 | Merged 2026-11-04 (PR #15) | `/settings` is open to everyone. Visitors see Appearance only; admins also see the admin sections, whose actions still refuse signed-out (401) and non-admin (403) requests. Visitors reach it from a gear in the top bar. The footer is gone, since nothing was left in it. |
+| E4 | Merged 2026-11-04 (PR #15) | **Admin tools** section in Settings links to Backup and Deleted recipes. Both pages are unchanged. |
