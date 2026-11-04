@@ -341,31 +341,76 @@ button {
     justify-content: center;
     padding: 0;
   }
-}
 
-@media (max-width: 480px) {
-  .site-header-inner {
-    column-gap: 10px;
-  }
-
-  .header-end,
+  /* Phone top bar (E2): logo and account on one line; Add floats, Review
+     and Import live in the account menu. */
   .header-actions {
-    gap: 6px;
-  }
-
-  .header-actions .btn {
-    padding: 0 10px;
+    display: none;
   }
 }
 
-@media (max-width: 400px) {
-  .header-actions .btn {
-    padding: 0 8px;
+.avatar-wrap {
+  position: relative;
+  display: block;
+}
+
+.account-dot {
+  display: none;
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--bg);
+  border-radius: 50%;
+  background: var(--fav);
+}
+
+.phone-only {
+  display: none;
+}
+
+.fab {
+  display: none;
+}
+
+@media (max-width: 599px) {
+  .account-dot {
+    display: block;
   }
 
-  /* "Add" still says Add; the plus sign is the first thing to go. */
-  .header-actions .btn-primary .icon {
-    display: none;
+  .phone-only {
+    display: list-item;
+  }
+
+  .fab {
+    position: fixed;
+    right: max(16px, env(safe-area-inset-right));
+    bottom: max(16px, env(safe-area-inset-bottom));
+    z-index: 15;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--on-accent);
+    box-shadow: var(--shadow);
+  }
+
+  .fab:hover {
+    background: var(--accent-hover);
+    color: var(--on-accent);
+  }
+
+  .fab .icon {
+    width: 26px;
+    height: 26px;
+  }
+
+  .site-main.has-fab {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom));
   }
 }
 
@@ -418,6 +463,10 @@ button {
   text-align: left;
   text-decoration: none;
   cursor: pointer;
+}
+
+.account-links .count-badge {
+  margin-left: 8px;
 }
 
 .account-links a:hover,

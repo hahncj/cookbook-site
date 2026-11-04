@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { expectAccessible, expectNoHorizontalScroll, fixtures, signInAsAdmin } from "./fixtures";
+import { clickAdminLink, expectAccessible, expectNoHorizontalScroll, fixtures, signInAsAdmin } from "./fixtures";
 
 async function createKey(page: Page, name: string) {
   await page.goto("/settings");
@@ -37,8 +37,7 @@ test.describe("AI submissions and review (AC-011–014, AC-024, AC-070)", () => 
     await anon.close();
 
     await page.goto("/");
-    await expect(page.getByRole("link", { name: /^Review, \d+ waiting$/ })).toBeVisible();
-    await page.getByRole("link", { name: /^Review, \d+ waiting$/ }).click();
+    await clickAdminLink(page, /^Review, \d+ waiting$/);
     const card = page.locator(".review-card").filter({ hasText: title });
     await expect(card).toContainText("New · from API key");
     await expect(card).toContainText("“From a chat”");
