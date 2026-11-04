@@ -1297,3 +1297,81 @@ figcaption {
 .key-form .field {
   flex: 1 1 240px;
 }
+
+/* ---------- In-app AI (M5) ---------- */
+
+.import-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.import-banner ul,
+.duplicate-notice ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
+
+.import-banner p,
+.duplicate-notice p {
+  margin: 6px 0 0;
+}
+
+.duplicate-notice li + li {
+  margin-top: 6px;
+}
+
+.btn-small {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.ai-helper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.ai-helper-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ai-helper-head h3 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.suggestion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.suggestion-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.suggestion-list .input {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.unsure {
+  padding: 2px 8px;
+  border: 1px solid var(--flag);
+  border-radius: 10px;
+  color: var(--flag);
+  font-size: 13px;
+}

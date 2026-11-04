@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Form, Link, useNavigation } from "react-router";
 import type { CountedRef } from "../../server/core/catalog";
 import type { FieldErrors } from "../../server/core/recipes";
 import type { EntryFormValues } from "../entry-form.server";
 import { CloseIcon, PlusIcon } from "./icons";
 import { PhotoField } from "./photo-field";
+import { IngredientHelper } from "./ingredient-helper";
+import { DuplicateNotice } from "./duplicate-notice";
+import type { DuplicateMatch } from "../../server/core/duplicates";
 
 interface Props {
   heading: string;
@@ -14,6 +17,14 @@ interface Props {
   values: EntryFormValues;
   errors?: FieldErrors;
   collections: CountedRef[];
+  /** In-app AI is available (signed-in admin and an API key is set). */
+  aiEnabled?: boolean;
+  /** Possible duplicates already found (imports). */
+  duplicates?: DuplicateMatch[];
+  /** Look for possible duplicates when the title changes (new entries). */
+  checkDuplicates?: boolean;
+  /** Shown under the heading, e.g. import notes. */
+  banner?: ReactNode;
 }
 
 const MIN_BLANK_ROWS = 3;
@@ -27,7 +38,21 @@ function FieldError({ id, message }: { id: string; message?: string }) {
   );
 }
 
-export function EntryForm({ heading, editing = false, cancelTo, values, errors = {}, collections }: Props) {
+export function EntryForm({
+  heading,
+  editing = false,
+  cancelTo,
+  values,
+  errors = {},
+  collections,
+  aiEnabled = false,
+  duplicates: initialDuplicates = [],
+  checkDuplicates = false,
+  banner,
+}: Props) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const [duplicates, setDuplicates] = useState(initialDuplicates);
+  const [checkedTitle, setCheckedTitle] = useState(values.title.trim());
   const navigation = useNavigation();
   const saving = navigation.state === "submitting" && navigation.formMethod?.toLowerCase() === "post";
   const [kind, setKind] = useState(values.kind);
@@ -39,10 +64,50 @@ export function EntryForm({ heading, editing = false, cancelTo, values, errors =
   const [nextKey, setNextKey] = useState(rows.length);
   const [uploading, setUploading] = useState(false);
 
+  const all = (name: string) => (formRef.current ? Array.from(new FormData(formRef.current).getAll(name), String) : []);
+  const currentDraft = () => ({
+    title: String(formRef.current ? new FormData(formRef.current).get("title") ?? "" : values.title),
+    ingredients: all("ingredientItem").map((i) => i.trim()).filter(Boolean),
+    steps: String(formRef.current ? new FormData(formRef.current).get("steps") ?? "" : values.steps).split(/\r?\n/).filter((s) => s.trim()),
+  });
+
+  async function lookForDuplicates() {
+    const draft = currentDraft();
+    const title = draft.title.trim();
+    if (!checkDuplicates || title === checkedTitle) return;
+    setCheckedTitle(title);
+    if (!title) return setDuplicates([]);
+    try {
+      const response = await fetch("/api/duplicates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, ingredients: draft.ingredients }),
+      });
+      if (response.ok) setDuplicates(((await response.json()) as { matches: DuplicateMatch[] }).matches);
+    } catch {
+      // A failed check never blocks saving.
+    }
+  }
+
+  function addIngredients(names: string[]) {
+    if (names.length === 0) return;
+    const form = formRef.current;
+    const isBlank = (key: number) => {
+      const q = form?.querySelector<HTMLInputElement>(`#q-${key}`)?.value.trim() ?? "";
+      const i = form?.querySelector<HTMLInputElement>(`#i-${key}`)?.value.trim() ?? "";
+      return !q && !i;
+    };
+    setRows((current) => [
+      ...current.filter((row) => !isBlank(row.key)),
+      ...names.map((item, n) => ({ key: nextKey + n, quantity: "", item })),
+    ]);
+    setNextKey((key) => key + names.length);
+  }
+
   const invalid = (field: keyof FieldErrors) => (errors[field] ? { "aria-invalid": true as const, "aria-describedby": `${field}-error` } : {});
 
   return (
-    <Form method="post" className="form-page" noValidate>
+    <Form ref={formRef} method="post" className="form-page" noValidate>
       <div className="form-head">
         <h1>{heading}</h1>
         <div style={{ display: "flex", gap: 8 }}>
@@ -54,6 +119,8 @@ export function EntryForm({ heading, editing = false, cancelTo, values, errors =
           </button>
         </div>
       </div>
+
+      {banner}
 
       {errors.form && (
         <div className="alert" role="alert">
@@ -69,6 +136,7 @@ export function EntryForm({ heading, editing = false, cancelTo, values, errors =
       )}
 
       <input type="hidden" name="revision" value={values.revision} />
+      {!editing && values.origin !== "manual" && <input type="hidden" name="origin" value={values.origin} />}
 
       <fieldset>
         <legend>Type</legend>
@@ -87,9 +155,20 @@ export function EntryForm({ heading, editing = false, cancelTo, values, errors =
 
       <div className="field">
         <label htmlFor="title">Title</label>
-        <input id="title" name="title" className="input-title" defaultValue={values.title} required maxLength={200} {...invalid("title")} />
+        <input
+          id="title"
+          name="title"
+          className="input-title"
+          defaultValue={values.title}
+          required
+          maxLength={200}
+          onBlur={lookForDuplicates}
+          {...invalid("title")}
+        />
         <FieldError id="title-error" message={errors.title} />
       </div>
+
+      <DuplicateNotice matches={duplicates} aiEnabled={aiEnabled} currentDraft={currentDraft} />
 
       <div className="field">
         <label htmlFor="description">
@@ -154,6 +233,9 @@ export function EntryForm({ heading, editing = false, cancelTo, values, errors =
             <PlusIcon />
             Add ingredient
           </button>
+          {aiEnabled && (
+            <IngredientHelper currentPhotoIds={() => all("photoId")} currentItems={() => all("ingredientItem")} onAdd={addIngredients} />
+          )}
         </div>
         <FieldError id="ingredients-error" message={errors.ingredients} />
       </fieldset>

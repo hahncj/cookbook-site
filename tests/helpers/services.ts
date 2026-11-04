@@ -6,11 +6,15 @@ import { fetchClientMetadataViaFetch } from "../../server/auth/cimd-fetch";
 import { loadConfig } from "../../server/config";
 import * as schema from "../../server/db/schema";
 import type { MediaStore } from "../../server/adapters/media";
+import type { RecipeAi } from "../../server/core/ai";
+import type { PageFetcher } from "../../server/importers/fetch-page";
 
 export const BASE_URL = "http://localhost:5173";
 export const ADMIN_EMAIL = "admin@example.com";
 
-export function createTestServices(options: { media?: MediaStore | null } = {}): Services {
+export function createTestServices(
+  options: { media?: MediaStore | null; ai?: RecipeAi; fetchPage?: PageFetcher; env?: Record<string, string> } = {},
+): Services {
   const sqlite = new Database(":memory:");
   const db = drizzle(sqlite, { schema });
   migrate(db, { migrationsFolder: "db/migrations" });
@@ -21,10 +25,19 @@ export function createTestServices(options: { media?: MediaStore | null } = {}):
       BETTER_AUTH_SECRET: "test-secret-test-secret-test-secret-123",
       GOOGLE_CLIENT_ID: "test-client-id",
       GOOGLE_CLIENT_SECRET: "test-client-secret",
+      ...options.env,
     },
     "node",
   );
-  return createServices({ config, db, media: options.media ?? null, fetchClientMetadata: fetchClientMetadataViaFetch });
+  return createServices({
+    config,
+    db,
+    media: options.media ?? null,
+    fetchClientMetadata: fetchClientMetadataViaFetch,
+    ai: options.ai,
+    // Tests never reach the network unless they supply a fetcher.
+    fetchPage: options.fetchPage ?? (async () => ({ ok: false, message: "No network in tests." })),
+  });
 }
 
 /**

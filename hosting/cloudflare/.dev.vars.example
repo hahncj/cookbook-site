@@ -5,3 +5,5 @@ ADMIN_EMAILS=you@example.com
 BETTER_AUTH_SECRET=replace-with-at-least-32-random-characters
 GOOGLE_CLIENT_ID=replace-me.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=replace-me
+# Optional: in-app AI (imports, ingredient identification). Without it, AI features say they aren't set up.
+# ANTHROPIC_API_KEY=sk-ant-...

@@ -12,6 +12,11 @@ const envSchema = z.object({
   // always sets cf-connecting-ip; Node hosts behind a proxy usually set
   // x-forwarded-for. Only set this to a header your proxy controls.
   CLIENT_IP_HEADER: z.string().optional(),
+  // In-app AI (M5). Optional: without a key, AI features say they're not set up.
+  ANTHROPIC_API_KEY: z.string().optional(),
+  ANTHROPIC_MODEL: z.string().optional(),
+  // Only for a gateway/proxy, or the browser tests' mock. Leave unset normally.
+  ANTHROPIC_BASE_URL: z.url().optional(),
 });
 
 export interface AppConfig {
@@ -24,6 +29,8 @@ export interface AppConfig {
   host: "cloudflare" | "node";
   /** Trusted header(s) holding the client IP. */
   clientIpHeaders: string[];
+  /** Null when no API key is set: AI features are then turned off (AC-036). */
+  anthropic: { apiKey: string; model: string | null; baseUrl: string | null } | null;
 }
 
 export function loadConfig(env: Record<string, unknown>, host: AppConfig["host"]): AppConfig {
@@ -40,5 +47,8 @@ export function loadConfig(env: Record<string, unknown>, host: AppConfig["host"]
     google: { clientId: values.GOOGLE_CLIENT_ID, clientSecret: values.GOOGLE_CLIENT_SECRET },
     host,
     clientIpHeaders: [values.CLIENT_IP_HEADER ?? (host === "cloudflare" ? "cf-connecting-ip" : "x-forwarded-for")],
+    anthropic: values.ANTHROPIC_API_KEY?.trim()
+      ? { apiKey: values.ANTHROPIC_API_KEY.trim(), model: values.ANTHROPIC_MODEL?.trim() || null, baseUrl: values.ANTHROPIC_BASE_URL ?? null }
+      : null,
   };
 }

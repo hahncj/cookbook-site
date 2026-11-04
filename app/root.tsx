@@ -109,6 +109,9 @@ function SiteHeader() {
             <Link to="/review" className="btn" aria-label={`Review, ${pendingReviews} waiting`}>
               Review{pendingReviews > 0 && <span className="count-badge" aria-hidden="true">{pendingReviews}</span>}
             </Link>
+            <Link to="/recipes/import" className="btn">
+              Import
+            </Link>
             <Link to="/recipes/new" className="btn btn-primary">
               <PlusIcon />
               Add

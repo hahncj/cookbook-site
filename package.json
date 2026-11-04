@@ -16,6 +16,7 @@
     "typecheck": "npm run typegen && tsc",
     "lint": "eslint .",
     "test": "vitest run",
+    "smoke:ai": "vitest run --config vitest.live.config.ts",
     "check": "npm run typecheck && npm run lint && npm test",
     "auth:schema": "auth generate --config scripts/auth-cli-config.ts --output server/db/auth-schema.ts --yes",
     "db:generate": "drizzle-kit generate",
@@ -25,6 +26,7 @@
     "deploy:ci": "wrangler d1 migrations apply cookbook --remote -c hosting/cloudflare/wrangler.jsonc && wrangler deploy"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "1.4.0",
     "@better-auth/cimd": "1.7.15",
     "@better-auth/core": "1.7.15",
     "@better-auth/mcp": "1.7.15",

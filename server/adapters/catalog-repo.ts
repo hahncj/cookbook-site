@@ -371,5 +371,14 @@ export function createCatalogRepository(db: Database, newId: () => string): Cata
         .where(eq(recipeNotes.recipeId, recipeId))
         .orderBy(desc(recipeNotes.createdAt));
     },
+
+    async similarCandidates(match, limit) {
+      const rows = await db
+        .select({ id: recipes.id, title: recipes.title, ingredients: recipes.ingredients })
+        .from(recipes)
+        .where(and(isNull(recipes.deletedAt), sql`${recipes.id} in (select recipe_id from recipes_fts where recipes_fts match ${match})`))
+        .limit(limit);
+      return rows.map((row) => ({ id: row.id, title: row.title, ingredients: row.ingredients.map((i) => i.item) }));
+    },
   };
 }

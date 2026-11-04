@@ -3,6 +3,7 @@ import { type RouteConfig, index, route } from "@react-router/dev/routes";
 export default [
   index("routes/home.tsx"),
   route("recipes/new", "routes/recipe-new.tsx"),
+  route("recipes/import", "routes/recipe-import.tsx"),
   route("recipes/:id", "routes/recipe.tsx"),
   route("recipes/:id/edit", "routes/recipe-edit.tsx"),
   route("recipes/:id/history", "routes/recipe-history.tsx"),
@@ -12,6 +13,9 @@ export default [
   route("review", "routes/review.tsx"),
   route("settings", "routes/settings.tsx"),
   route("api/photos", "routes/api.photos.ts"),
+  route("api/ai/ingredients", "routes/api.ai.ingredients.ts"),
+  route("api/ai/compare", "routes/api.ai.compare.ts"),
+  route("api/duplicates", "routes/api.duplicates.ts"),
   route("api/backup", "routes/api.backup.ts"),
   route("api/backup/restore", "routes/api.backup.restore.ts"),
   route("api/backup/photo", "routes/api.backup.photo.ts"),

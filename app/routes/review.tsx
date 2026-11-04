@@ -4,6 +4,7 @@ import { ingredientLine } from "../../server/core/recipes";
 import type { Submission } from "../../server/core/submissions";
 import { requireAdminPage, requireAdminWrite } from "../admin.server";
 import { ChangeList } from "../components/change-list";
+import { DuplicateNotice } from "../components/duplicate-notice";
 import { servicesContext } from "../context";
 import type { Route } from "./+types/review";
 
@@ -38,7 +39,16 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     services.submissions.listDecided(),
     services.submissions.approvalRequired(),
   ]);
-  return { pending: pending.map(view), decided: decided.map(view), approvalRequired };
+  // Free duplicate check for new recipes from AI tools (D8); no AI involved.
+  const views = await Promise.all(
+    pending.map(async (submission) => {
+      const item = view(submission);
+      const duplicates =
+        item.type === "create" ? await services.catalog.findSimilar({ title: item.title, ingredients: item.proposed.ingredients.map((i) => i.item) }) : [];
+      return { ...item, duplicates };
+    }),
+  );
+  return { pending: views, decided: decided.map(view), approvalRequired, aiEnabled: services.ai.configured };
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -90,7 +100,7 @@ function Preview({ proposed }: { proposed: ReturnType<typeof view>["proposed"] }
 }
 
 export default function Review({ loaderData, actionData }: Route.ComponentProps) {
-  const { pending, decided, approvalRequired } = loaderData;
+  const { pending, decided, approvalRequired, aiEnabled } = loaderData;
   const navigation = useNavigation();
   const busyId = navigation.state === "submitting" ? navigation.formData?.get("id") : null;
 
@@ -130,6 +140,15 @@ export default function Review({ loaderData, actionData }: Route.ComponentProps)
               <Preview proposed={item.proposed} />
             )}
             {item.changes && <Preview proposed={item.proposed} />}
+            <DuplicateNotice
+              matches={item.duplicates}
+              aiEnabled={aiEnabled}
+              currentDraft={() => ({
+                title: item.proposed.title,
+                ingredients: item.proposed.ingredients.map((i) => i.item),
+                steps: item.proposed.steps,
+              })}
+            />
 
             <Form method="post" className="review-actions">
               <input type="hidden" name="id" value={item.id} />

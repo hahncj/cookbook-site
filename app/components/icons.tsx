@@ -78,3 +78,10 @@ export const HistoryIcon = (p: IconProps) => (
     <path d="M12 8v4l3 2" />
   </Icon>
 );
+
+export const SparkleIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />
+    <path d="M19 16l.7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7z" />
+  </Icon>
+);

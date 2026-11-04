@@ -78,6 +78,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 <PlusIcon />
                 Add a recipe
               </Link>
+              <Link to="/recipes/import" className="btn">
+                Import from a chat, link or photo
+              </Link>
               <Link to="/recipes/new?kind=idea" className="btn">
                 Jot down an idea
               </Link>

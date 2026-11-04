@@ -14,7 +14,12 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
   await requireAdminPage(request, services);
   const entry = await services.catalog.get(params.id);
   if (!entry) throw data("Not found", { status: 404 });
-  return { id: entry.id, values: entryToFormValues(entry), collections: await services.catalog.listCollections() };
+  return {
+    id: entry.id,
+    values: entryToFormValues(entry),
+    collections: await services.catalog.listCollections(),
+    aiEnabled: services.ai.configured,
+  };
 }
 
 export async function action({ request, params, context }: Route.ActionArgs) {
@@ -43,6 +48,7 @@ export default function EditRecipe({ loaderData, actionData }: Route.ComponentPr
         values={actionData?.values ?? loaderData.values}
         errors={actionData?.errors}
         collections={loaderData.collections}
+        aiEnabled={loaderData.aiEnabled}
       />
       <Form
         method="post"
